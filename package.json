@@ -1,6 +1,6 @@
 {
   "type": "module",
-  "name": "togello-mcp-server",
+  "name": "@togello/togello-mcp-server",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
