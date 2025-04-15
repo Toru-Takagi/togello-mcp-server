@@ -9,7 +9,7 @@ This server implements the Model Context Protocol (MCP) for managing context in 
   "mcpServers": {
     "togello": {
       "command": "npx",
-      "args": ["-y", "@Toru-Takagi/togello-mcp-server"],
+      "args": ["-y", "@togello/togello-mcp-server"],
       "env": {
         "TOGELLO_API_TOKEN": "replace_with_your_token",
       }
