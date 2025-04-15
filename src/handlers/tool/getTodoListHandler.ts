@@ -11,17 +11,34 @@ export const getTodoListHandler: ToolCallback<{}> = async ({}) => {
       content: [
         {
           type: "text",
-          uri: new URL("togello://tasks"),
+          text: `The following is a single task represented in the order:
+[label of the task, scheduled start date, scheduled end date, priority, category of the task]`,
+        },
+        {
+          type: "text",
+          text: `The tasks with scheduled start dates that are today or in the past, and those with a priority of 2, should be addressed as soon as possible.`,
+        },
+        {
+          type: "text",
           text: tasks
-            .map((todo) =>
-              JSON.stringify({
-                label: todo.label,
-                scheduledStartDate: todo.scheduledStartDate,
-                scheduledEndDate: todo.scheduledEndDate,
-                priorityNumber: todo.priorityNumber,
-              })
-            )
+            .map((todo) => [
+              todo.label,
+              todo.scheduledStartDate,
+              todo.scheduledEndDate,
+              todo.priorityNumber,
+              todo.categoryLabel,
+            ])
             .join(","),
+          // text: tasks
+          //   .map((todo) =>
+          //     JSON.stringify({
+          //       label: todo.label,
+          //       scheduledStartDate: todo.scheduledStartDate,
+          //       scheduledEndDate: todo.scheduledEndDate,
+          //       priorityNumber: todo.priorityNumber,
+          //     })
+          //   )
+          //   .join(","),
         },
       ],
     };
