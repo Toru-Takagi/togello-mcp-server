@@ -2,6 +2,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { getTodayCalendarHandler } from "./handlers/tool/getTodayCalendarHandler.js";
 import { getTodoListHandler } from "./handlers/tool/getTodoListHandler.js";
 
 const server = new McpServer({
@@ -17,6 +18,7 @@ async function main() {
   const transport = new StdioServerTransport();
   // server.resource("togello-todos", "togello://tasks", tasksHandler);
   server.tool("get-tasks-list", {}, getTodoListHandler);
+  server.tool("get-today-calendar", {}, getTodayCalendarHandler);
   await server.connect(transport);
 }
 

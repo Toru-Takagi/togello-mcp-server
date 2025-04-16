@@ -48,7 +48,6 @@ export const getTodoListHandler: ToolCallback<{}> = async ({}) => {
       content: [
         {
           type: "text",
-          uri: new URL("togello://tasks"),
           text: `Error in tool handler: ${error}`,
         },
       ],
