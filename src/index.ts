@@ -3,8 +3,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { categoryListHandler } from "./handlers/resource/categoryListHandler.js";
 import { createTaskHandler } from "./handlers/tool/createTaskHandler.js";
+import { getActivityItemListHandler } from "./handlers/tool/getActivityItemListHandler.js";
 import { getTodayCalendarHandler } from "./handlers/tool/getTodayCalendarHandler.js";
 import { getTodoCategoryListHandler } from "./handlers/tool/getTodoCategoryListHandler.js";
 import { getTodoListHandler } from "./handlers/tool/getTodoListHandler.js";
@@ -26,11 +26,11 @@ async function main() {
   //   "togello://category-list",
   //   categoryListHandler
   // );
-  server.resource(
-    "activity-item-list",
-    "togello://activity-item-list",
-    categoryListHandler
-  );
+  // server.resource(
+  //   "activity-item-list",
+  //   "togello://activity-item-list",
+  //   categoryListHandler
+  // );
   server.tool(
     "get-tasks-list",
     "Retrieves incomplete tasks from the TODO feature. Recognizes task name / scheduled start date and time / scheduled end date and time / priority / category",
@@ -60,6 +60,12 @@ async function main() {
     "Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ",
     {},
     getTodayCalendarHandler
+  );
+  server.tool(
+    "get-activity-item-list",
+    "Retrieves the list of activity items from the integration feature. Recognizes activity item UUID / item name",
+    {},
+    getActivityItemListHandler
   );
   await server.connect(transport);
 }

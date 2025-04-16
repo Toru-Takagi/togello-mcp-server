@@ -31,6 +31,7 @@ This server implements the Model Context Protocol (MCP) for managing context in 
 - create-task: TODO機能で新しいタスクを作成します。タスク名を指定する必要があります。
 - get-todo-category-list: TODO機能からカテゴリーリストを取得します。カテゴリー名 / カテゴリーUUID を認識できます。
 - get-today-calendar: 連携しているGoogleカレンダーの昨日/今日/明日の予定を取得します。予定名 / 開始日時 / 終了日時 を認識できます。
+- get-activity-item-list: 統合機能からアクティビティ項目のリストを取得します。アクティビティ項目UUID / 項目名 を認識できます。
 
 ```
 
