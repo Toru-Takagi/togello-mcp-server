@@ -1,10 +1,11 @@
 import { httpClient } from "../../client.js";
-export const createTaskHandler = async ({ taskName, }) => {
+export const createTaskHandler = async ({ taskName, categoryUUID, }) => {
     try {
         await httpClient.postJson({
             path: "/v2/integration/todo",
             body: {
                 label: taskName,
+                categoryUUID: categoryUUID,
             },
         });
         return {

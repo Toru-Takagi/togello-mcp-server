@@ -4,21 +4,24 @@ import { httpClient } from "../../client.js";
 
 export type CreateTaskHandlerArgs = {
   taskName: z.ZodString;
-  categoryUUID?: z.ZodString;
+  categoryUUID: z.ZodOptional<z.ZodString>;
 };
 
 type CreateTaskRequest = {
   label: string;
+  categoryUUID?: string;
 };
 
 export const createTaskHandler: ToolCallback<CreateTaskHandlerArgs> = async ({
   taskName,
+  categoryUUID,
 }) => {
   try {
     await httpClient.postJson<null, CreateTaskRequest>({
       path: "/v2/integration/todo",
       body: {
         label: taskName,
+        categoryUUID: categoryUUID,
       },
     });
     return {
