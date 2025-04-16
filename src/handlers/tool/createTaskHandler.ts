@@ -4,6 +4,7 @@ import { httpClient } from "../../client.js";
 
 export type CreateTaskHandlerArgs = {
   taskName: z.ZodString;
+  categoryUUID?: z.ZodString;
 };
 
 type CreateTaskRequest = {

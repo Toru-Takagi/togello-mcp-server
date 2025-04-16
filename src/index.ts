@@ -6,6 +6,7 @@ import { z } from "zod";
 import { categoryListHandler } from "./handlers/resource/categoryListHandler.js";
 import { createTaskHandler } from "./handlers/tool/createTaskHandler.js";
 import { getTodayCalendarHandler } from "./handlers/tool/getTodayCalendarHandler.js";
+import { getTodoCategoryListHandler } from "./handlers/tool/getTodoCategoryListHandler.js";
 import { getTodoListHandler } from "./handlers/tool/getTodoListHandler.js";
 
 const server = new McpServer({
@@ -20,11 +21,11 @@ const server = new McpServer({
 async function main() {
   const transport = new StdioServerTransport();
   // server.resource("togello-todos", "togello://tasks", tasksHandler);
-  server.resource(
-    "category-list",
-    "togello://category-list",
-    categoryListHandler
-  );
+  // server.resource(
+  //   "category-list",
+  //   "togello://category-list",
+  //   categoryListHandler
+  // );
   server.resource(
     "activity-item-list",
     "togello://activity-item-list",
@@ -39,8 +40,20 @@ async function main() {
   server.tool(
     "create-task",
     "Creates a new task in the TODO feature.",
-    { taskName: z.string().describe("create task name") },
+    {
+      taskName: z.string().describe("create task name"),
+      categoryUUID: z
+        .string()
+        .optional()
+        .describe("category UUID. category UUID of get-todo-category-list"),
+    },
     createTaskHandler
+  );
+  server.tool(
+    "get-todo-category-list",
+    "Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID",
+    {},
+    getTodoCategoryListHandler
   );
   server.tool(
     "get-today-calendar",
