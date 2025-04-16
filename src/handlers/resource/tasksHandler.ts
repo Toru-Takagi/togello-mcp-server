@@ -1,5 +1,5 @@
 import { ReadResourceCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { httpClient } from "../client.js";
+import { httpClient } from "../../client.js";
 
 export const tasksHandler: ReadResourceCallback = async (uri, {}) => {
   try {

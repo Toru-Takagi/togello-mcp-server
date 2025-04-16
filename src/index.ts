@@ -2,6 +2,9 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+import { categoryListHandler } from "./handlers/resource/categoryListHandler.js";
+import { createTaskHandler } from "./handlers/tool/createTaskHandler.js";
 import { getTodayCalendarHandler } from "./handlers/tool/getTodayCalendarHandler.js";
 import { getTodoListHandler } from "./handlers/tool/getTodoListHandler.js";
 
@@ -17,8 +20,34 @@ const server = new McpServer({
 async function main() {
   const transport = new StdioServerTransport();
   // server.resource("togello-todos", "togello://tasks", tasksHandler);
-  server.tool("get-tasks-list", {}, getTodoListHandler);
-  server.tool("get-today-calendar", {}, getTodayCalendarHandler);
+  server.resource(
+    "category-list",
+    "togello://category-list",
+    categoryListHandler
+  );
+  server.resource(
+    "activity-item-list",
+    "togello://activity-item-list",
+    categoryListHandler
+  );
+  server.tool(
+    "get-tasks-list",
+    "Retrieves incomplete tasks from the TODO feature. Recognizes task name / scheduled start date and time / scheduled end date and time / priority / category",
+    {},
+    getTodoListHandler
+  );
+  server.tool(
+    "create-task",
+    "Creates a new task in the TODO feature.",
+    { taskName: z.string().describe("create task name") },
+    createTaskHandler
+  );
+  server.tool(
+    "get-today-calendar",
+    "Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ",
+    {},
+    getTodayCalendarHandler
+  );
   await server.connect(transport);
 }
 
