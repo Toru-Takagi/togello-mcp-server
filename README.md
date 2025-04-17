@@ -32,6 +32,9 @@ This server implements the Model Context Protocol (MCP) for managing context in 
 - get-todo-category-list: TODO機能からカテゴリーリストを取得します。カテゴリー名 / カテゴリーUUID を認識できます。
 - get-today-calendar: 連携しているGoogleカレンダーの昨日/今日/明日の予定を取得します。予定名 / 開始日時 / 終了日時 を認識できます。
 - get-activity-item-list: 統合機能からアクティビティ項目のリストを取得します。アクティビティ項目UUID / 項目名 を認識できます。
+- get-activity-log-list: 統合機能からアクティビティログのリストを取得します。すべてのログの終了日時が入力されている場合、現在何も実行していないことを意味します。終了日時がnullのものがある場合（最大で1つ）、現在その活動を実行中であることを意味します。アクティビティログUUID / 開始日時 / 終了日時 / 項目名 を認識できます。
+- start-activity-log: アクティビティログを開始します。get-activity-log-listのすべてのendDateTimeに値がある場合、何も実行されていないため、start-activity-logを呼び出すことができます。
+- complete-activity-log: アクティビティログを完了します。get-activity-log-listのendDateTimeにnullがある場合（つまり開始されているアクティビティがある場合）に使用できます。
 
 ```
 
