@@ -10,6 +10,7 @@ import { getTodayCalendarHandler } from "./handlers/tool/getTodayCalendarHandler
 import { getTodoCategoryListHandler } from "./handlers/tool/getTodoCategoryListHandler.js";
 import { getTodoListHandler } from "./handlers/tool/getTodoListHandler.js";
 import { startActivityLogHandler } from "./handlers/tool/startActivityLogHandler.js";
+import { updateTaskHandler } from "./handlers/tool/updateTaskHandler.js";
 const server = new McpServer({
     name: "togello",
     version: "1.0.0",
@@ -31,7 +32,7 @@ async function main() {
     //   "togello://activity-item-list",
     //   categoryListHandler
     // );
-    server.tool("get-tasks-list", "Retrieves incomplete tasks from the TODO feature. Recognizes task name / scheduled start date and time / scheduled end date and time / priority / category", {}, getTodoListHandler);
+    server.tool("get-tasks-list", "Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / scheduled start date and time / scheduled end date and time / priority / category", {}, getTodoListHandler);
     server.tool("create-task", "Creates a new task in the TODO feature.", {
         taskName: z.string().describe("create task name"),
         categoryUUID: z
@@ -39,6 +40,14 @@ async function main() {
             .optional()
             .describe("category UUID. category UUID of get-todo-category-list"),
     }, createTaskHandler);
+    server.tool("update-task", "Updates a task in the TODO feature.", {
+        todoUUID: z
+            .string()
+            .describe("Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it."),
+        isCompleted: z
+            .boolean()
+            .describe("You can update the completion status of the task. If true, it is completed. If false, it can be reverted to incomplete."),
+    }, updateTaskHandler);
     server.tool("get-todo-category-list", "Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID", {}, getTodoCategoryListHandler);
     server.tool("get-today-calendar", "Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ", {}, getTodayCalendarHandler);
     server.tool("get-activity-item-list", "Retrieves the list of activity items from the integration feature. Recognizes activity item UUID / item name", {}, getActivityItemListHandler);
