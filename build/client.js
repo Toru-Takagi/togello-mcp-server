@@ -43,13 +43,14 @@ export const httpClient = {
             throw new Error("environment variable TOGELLO_API_TOKEN is not set");
         }
         const url = `${API_BASE_URL}${path}`;
+        const bodyString = body !== null ? JSON.stringify(body) : null;
         const response = await fetch(url, {
             method: "PUT",
             headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(body),
+            body: bodyString,
         });
         if (!response.ok) {
             throw new Error(`response status: ${response.status}`);

@@ -26,16 +26,6 @@ export const getTodoListHandler = async ({}) => {
                         todo.categoryLabel,
                     ])
                         .join(","),
-                    // text: tasks
-                    //   .map((todo) =>
-                    //     JSON.stringify({
-                    //       label: todo.label,
-                    //       scheduledStartDate: todo.scheduledStartDate,
-                    //       scheduledEndDate: todo.scheduledEndDate,
-                    //       priorityNumber: todo.priorityNumber,
-                    //     })
-                    //   )
-                    //   .join(","),
                 },
             ],
         };
