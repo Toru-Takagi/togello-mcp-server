@@ -39,6 +39,14 @@ async function main() {
             .string()
             .optional()
             .describe('category UUID. category UUID of get-todo-category-list'),
+        scheduledStartDate: z
+            .string()
+            .optional()
+            .describe('Scheduled start date in ISO format.'),
+        url: z
+            .string()
+            .optional()
+            .describe('Optional URL associated with the task.'),
     }, createTaskHandler);
     server.tool('update-task', 'Updates a task in the TODO feature.', {
         todoUUID: z
