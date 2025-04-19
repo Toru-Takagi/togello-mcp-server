@@ -75,6 +75,14 @@ async function main() {
         .describe(
           'You can update the completion status of the task. If true, it is completed. If false, it can be reverted to incomplete.',
         ),
+      scheduledStartDate: z
+        .string()
+        .optional()
+        .describe('Scheduled start date in ISO format.'),
+      url: z
+        .string()
+        .optional()
+        .describe('Optional URL associated with the task.'),
     },
     updateTaskHandler,
   )

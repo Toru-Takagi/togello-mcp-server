@@ -55,6 +55,14 @@ async function main() {
         isCompleted: z
             .boolean()
             .describe('You can update the completion status of the task. If true, it is completed. If false, it can be reverted to incomplete.'),
+        scheduledStartDate: z
+            .string()
+            .optional()
+            .describe('Scheduled start date in ISO format.'),
+        url: z
+            .string()
+            .optional()
+            .describe('Optional URL associated with the task.'),
     }, updateTaskHandler);
     server.tool('get-todo-category-list', 'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID', {}, getTodoCategoryListHandler);
     server.tool('get-today-calendar', 'Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ', {}, getTodayCalendarHandler);
