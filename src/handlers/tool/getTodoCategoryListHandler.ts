@@ -1,42 +1,44 @@
-import { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { httpClient } from "../../client.js";
+import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { httpClient } from '../../client.js'
 
-export const getTodoCategoryListHandler: ToolCallback<{}> = async ({}) => {
+export const getTodoCategoryListHandler: ToolCallback<
+  Record<string, never>
+> = async () => {
   try {
     const categoryList = await httpClient.fetchURL<CategoryListResponse[]>({
-      path: "/v2/integration/categories",
-    });
+      path: '/v2/integration/categories',
+    })
 
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `The following is a single category represented in the order:
 [category uuid, label of category]`,
         },
         {
-          type: "text",
+          type: 'text',
           text: categoryList
             .map((category) => [category.categoryUUID, category.label])
-            .join(","),
+            .join(','),
         },
       ],
-    };
+    }
   } catch (error) {
-    console.error("Error in tool handler:", error);
+    console.error('Error in tool handler:', error)
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `Error in tool handler: ${error}`,
         },
       ],
-    };
+    }
   }
-};
+}
 
 type CategoryListResponse = {
-  categoryUUID: string | null;
-  label: string;
-  operatedAt: string;
-};
+  categoryUUID: string | null
+  label: string
+  operatedAt: string
+}

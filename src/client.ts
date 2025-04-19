@@ -1,83 +1,83 @@
-const API_BASE_URL = "https://togello.api.toru-takagi.dev";
+const API_BASE_URL = 'https://togello.api.toru-takagi.dev'
 
 type FetchServerProps = {
-  path: string;
-};
+  path: string
+}
 
 type PostServerProps<T> = FetchServerProps & {
-  body: T;
-};
+  body: T
+}
 
 type HttpClient = {
-  fetchURL: <T>(props: FetchServerProps) => Promise<T>;
-  postJson: <T, U>(props: PostServerProps<U>) => Promise<T>;
-  putJson: <T, U>(props: PostServerProps<U>) => Promise<T>;
-};
+  fetchURL: <T>(props: FetchServerProps) => Promise<T>
+  postJson: <T, U>(props: PostServerProps<U>) => Promise<T>
+  putJson: <T, U>(props: PostServerProps<U>) => Promise<T>
+}
 
 export const httpClient: HttpClient = {
   fetchURL: async <T>({ path }: FetchServerProps): Promise<T> => {
-    const token = process.env.TOGELLO_API_TOKEN;
+    const token = process.env.TOGELLO_API_TOKEN
     if (!token) {
-      throw new Error("environment variable TOGELLO_API_TOKEN is not set");
+      throw new Error('environment variable TOGELLO_API_TOKEN is not set')
     }
 
-    const url = `${API_BASE_URL}${path}`;
+    const url = `${API_BASE_URL}${path}`
     const response = await fetch(url, {
-      method: "GET",
+      method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
-    });
+    })
     if (!response.ok) {
-      throw new Error(`response status: ${response.status}`);
+      throw new Error(`response status: ${response.status}`)
     }
 
-    return (await response.json()) as T;
+    return (await response.json()) as T
   },
 
   postJson: async <T, U>({ path, body }: PostServerProps<U>): Promise<T> => {
-    const token = process.env.TOGELLO_API_TOKEN;
+    const token = process.env.TOGELLO_API_TOKEN
     if (!token) {
-      throw new Error("environment variable TOGELLO_API_TOKEN is not set");
+      throw new Error('environment variable TOGELLO_API_TOKEN is not set')
     }
 
-    const url = `${API_BASE_URL}${path}`;
+    const url = `${API_BASE_URL}${path}`
     const response = await fetch(url, {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
-    });
+    })
     if (!response.ok) {
-      throw new Error(`response status: ${response.status}`);
+      throw new Error(`response status: ${response.status}`)
     }
 
-    return (await response.json()) as T;
+    return (await response.json()) as T
   },
 
   putJson: async <T, U>({ path, body }: PostServerProps<U>): Promise<T> => {
-    const token = process.env.TOGELLO_API_TOKEN;
+    const token = process.env.TOGELLO_API_TOKEN
     if (!token) {
-      throw new Error("environment variable TOGELLO_API_TOKEN is not set");
+      throw new Error('environment variable TOGELLO_API_TOKEN is not set')
     }
 
-    const url = `${API_BASE_URL}${path}`;
-    const bodyString = body !== null ? JSON.stringify(body) : null;
+    const url = `${API_BASE_URL}${path}`
+    const bodyString = body !== null ? JSON.stringify(body) : null
     const response = await fetch(url, {
-      method: "PUT",
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: bodyString,
-    });
+    })
     if (!response.ok) {
-      throw new Error(`response status: ${response.status}`);
+      throw new Error(`response status: ${response.status}`)
     }
 
-    return (await response.json()) as T;
+    return (await response.json()) as T
   },
-};
+}

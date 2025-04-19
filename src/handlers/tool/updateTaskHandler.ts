@@ -1,15 +1,15 @@
-import { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import { httpClient } from "../../client.js";
+import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { z } from 'zod'
+import { httpClient } from '../../client.js'
 
 export type UpdateTaskHandlerArgs = {
-  todoUUID: z.ZodString;
-  isCompleted: z.ZodBoolean;
-};
+  todoUUID: z.ZodString
+  isCompleted: z.ZodBoolean
+}
 
 type UpdateTaskRequest = {
-  isCompleted: boolean;
-};
+  isCompleted: boolean
+}
 
 export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
   todoUUID,
@@ -21,26 +21,26 @@ export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
       body: {
         isCompleted,
       },
-    });
+    })
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `Task status updated successfully. Task is now ${
-            isCompleted ? "completed" : "incomplete"
+            isCompleted ? 'completed' : 'incomplete'
           }.`,
         },
       ],
-    };
+    }
   } catch (error) {
-    console.error("Error updating task:", error);
+    console.error('Error updating task:', error)
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `Error updating task: ${error}`,
         },
       ],
-    };
+    }
   }
-};
+}

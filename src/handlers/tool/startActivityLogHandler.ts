@@ -1,42 +1,42 @@
-import { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import { httpClient } from "../../client.js";
+import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { z } from 'zod'
+import { httpClient } from '../../client.js'
 
 export type StartActivityLogHandlerArgs = {
-  activityItemName: z.ZodString;
-};
+  activityItemName: z.ZodString
+}
 
 type StartActivityLogRequest = {
-  activityItemName: string;
-};
+  activityItemName: string
+}
 
 export const startActivityLogHandler: ToolCallback<
   StartActivityLogHandlerArgs
 > = async ({ activityItemName }) => {
   try {
     await httpClient.postJson<null, StartActivityLogRequest>({
-      path: "/v2/integration/activity-logs",
+      path: '/v2/integration/activity-logs',
       body: {
         activityItemName: activityItemName,
       },
-    });
+    })
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `Activity log for "${activityItemName}" started successfully.`,
         },
       ],
-    };
+    }
   } catch (error) {
-    console.error("Error starting activity log:", error);
+    console.error('Error starting activity log:', error)
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `Error starting activity log: ${error}`,
         },
       ],
-    };
+    }
   }
-};
+}

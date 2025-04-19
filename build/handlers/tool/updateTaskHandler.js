@@ -1,4 +1,4 @@
-import { httpClient } from "../../client.js";
+import { httpClient } from '../../client.js';
 export const updateTaskHandler = async ({ todoUUID, isCompleted, }) => {
     try {
         await httpClient.putJson({
@@ -10,18 +10,18 @@ export const updateTaskHandler = async ({ todoUUID, isCompleted, }) => {
         return {
             content: [
                 {
-                    type: "text",
-                    text: `Task status updated successfully. Task is now ${isCompleted ? "completed" : "incomplete"}.`,
+                    type: 'text',
+                    text: `Task status updated successfully. Task is now ${isCompleted ? 'completed' : 'incomplete'}.`,
                 },
             ],
         };
     }
     catch (error) {
-        console.error("Error updating task:", error);
+        console.error('Error updating task:', error);
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: `Error updating task: ${error}`,
                 },
             ],

@@ -1,13 +1,13 @@
-import { httpClient } from "../../client.js";
-export const tasksHandler = async (uri, {}) => {
+import { httpClient } from '../../client.js';
+export const tasksHandler = async (uri, _options) => {
     try {
         const tasks = await httpClient.fetchURL({
-            path: "/v2/integration/todo",
+            path: '/v2/integration/todo',
         });
         return {
             contents: [
                 {
-                    type: "text",
+                    type: 'text',
                     uri: uri.href,
                     text: tasks
                         .map((todo) => JSON.stringify({
@@ -16,17 +16,17 @@ export const tasksHandler = async (uri, {}) => {
                         scheduledEndDate: todo.scheduledEndDate,
                         priorityNumber: todo.priorityNumber,
                     }))
-                        .join(","),
+                        .join(','),
                 },
             ],
         };
     }
     catch (error) {
-        console.error("Error in resource handler:", error);
+        console.error('Error in resource handler:', error);
         return {
             contents: [
                 {
-                    type: "text",
+                    type: 'text',
                     uri: uri.href,
                     text: `Error in resource handler: ${error}`,
                 },

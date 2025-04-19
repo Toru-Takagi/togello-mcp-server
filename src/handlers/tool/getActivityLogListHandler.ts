@@ -1,22 +1,24 @@
-import { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { httpClient } from "../../client.js";
+import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { httpClient } from '../../client.js'
 
-export const getActivityLogListHandler: ToolCallback<{}> = async ({}) => {
+export const getActivityLogListHandler: ToolCallback<
+  Record<string, never>
+> = async () => {
   try {
     const activityLogList = await httpClient.fetchURL<
       ActivityLogListResponse[]
     >({
-      path: "/v2/integration/activity-logs",
-    });
+      path: '/v2/integration/activity-logs',
+    })
 
     return {
       content: [
         {
-          type: "text",
-          text: `The following is a list of activity logs. Since it is a record of what the person has done, if all the end dates are filled in, this person is not doing anything now. If there is one with a null end date, there should be at most one, and if there is one, it means that the person is doing it now. The information is in the following order: [activity log UUID, start date and time, end date and time, item name]`,
+          type: 'text',
+          text: 'The following is a list of activity logs. Since it is a record of what the person has done, if all the end dates are filled in, this person is not doing anything now. If there is one with a null end date, there should be at most one, and if there is one, it means that the person is doing it now. The information is in the following order: [activity log UUID, start date and time, end date and time, item name]',
         },
         {
-          type: "text",
+          type: 'text',
           text: activityLogList
             .map((log) => [
               log.activityLogUUID,
@@ -24,26 +26,26 @@ export const getActivityLogListHandler: ToolCallback<{}> = async ({}) => {
               log.endDateTime,
               log.itemName,
             ])
-            .join("\n"),
+            .join('\n'),
         },
       ],
-    };
+    }
   } catch (error) {
-    console.error("Error in activity log list handler:", error);
+    console.error('Error in activity log list handler:', error)
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `アクティビティログの取得中にエラーが発生しました: ${error}`,
         },
       ],
-    };
+    }
   }
-};
+}
 
 type ActivityLogListResponse = {
-  activityLogUUID: string;
-  startDateTime: string;
-  endDateTime: string | null;
-  itemName: string;
-};
+  activityLogUUID: string
+  startDateTime: string
+  endDateTime: string | null
+  itemName: string
+}

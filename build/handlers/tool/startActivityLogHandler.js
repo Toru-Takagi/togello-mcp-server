@@ -1,8 +1,8 @@
-import { httpClient } from "../../client.js";
+import { httpClient } from '../../client.js';
 export const startActivityLogHandler = async ({ activityItemName }) => {
     try {
         await httpClient.postJson({
-            path: "/v2/integration/activity-logs",
+            path: '/v2/integration/activity-logs',
             body: {
                 activityItemName: activityItemName,
             },
@@ -10,18 +10,18 @@ export const startActivityLogHandler = async ({ activityItemName }) => {
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: `Activity log for "${activityItemName}" started successfully.`,
                 },
             ],
         };
     }
     catch (error) {
-        console.error("Error starting activity log:", error);
+        console.error('Error starting activity log:', error);
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: `Error starting activity log: ${error}`,
                 },
             ],

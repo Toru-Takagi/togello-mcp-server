@@ -1,4 +1,4 @@
-import { httpClient } from "../../client.js";
+import { httpClient } from '../../client.js';
 export const completeActivityLogHandler = async ({ activityLogUUID }) => {
     try {
         await httpClient.putJson({
@@ -8,18 +8,18 @@ export const completeActivityLogHandler = async ({ activityLogUUID }) => {
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: `Activity log with UUID "${activityLogUUID}" completed successfully.`,
                 },
             ],
         };
     }
     catch (error) {
-        console.error("Error completing activity log:", error);
+        console.error('Error completing activity log:', error);
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: `Error completing activity log: ${error}`,
                 },
             ],

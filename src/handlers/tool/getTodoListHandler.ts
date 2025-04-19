@@ -1,25 +1,27 @@
-import { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { httpClient } from "../../client.js";
+import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { httpClient } from '../../client.js'
 
-export const getTodoListHandler: ToolCallback<{}> = async ({}) => {
+export const getTodoListHandler: ToolCallback<
+  Record<string, never>
+> = async () => {
   try {
     const tasks = await httpClient.fetchURL<TodoListResponse>({
-      path: "/v2/integration/todo",
-    });
+      path: '/v2/integration/todo',
+    })
 
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `The following is a single task represented in the order:
 [todo uuid, label of the task, scheduled start date, scheduled end date, priority, category of the task]`,
         },
         {
-          type: "text",
-          text: `The tasks with scheduled start dates that are today or in the past, and those with a priority of 2, should be addressed as soon as possible.`,
+          type: 'text',
+          text: 'The tasks with scheduled start dates that are today or in the past, and those with a priority of 2, should be addressed as soon as possible.',
         },
         {
-          type: "text",
+          type: 'text',
           text: tasks
             .map((todo) => [
               todo.todoUUID,
@@ -29,35 +31,35 @@ export const getTodoListHandler: ToolCallback<{}> = async ({}) => {
               todo.priorityNumber,
               todo.categoryLabel,
             ])
-            .join(","),
+            .join(','),
         },
       ],
-    };
+    }
   } catch (error) {
-    console.error("Error in tool handler:", error);
+    console.error('Error in tool handler:', error)
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `Error in tool handler: ${error}`,
         },
       ],
-    };
+    }
   }
-};
+}
 
 type TodoListResponse = {
-  todoUUID: string | null;
-  todoSettingUUID: string | null;
-  label: string;
-  priorityNumber: number;
-  completedAt: string | null;
-  operatedAt: string;
-  createdAt: string;
-  scheduledStartDate: string | null;
-  scheduledEndDate: string | null;
-  url: string | null;
-  detail: string;
-  categoryUUID: string | null;
-  categoryLabel: string | null;
-}[];
+  todoUUID: string | null
+  todoSettingUUID: string | null
+  label: string
+  priorityNumber: number
+  completedAt: string | null
+  operatedAt: string
+  createdAt: string
+  scheduledStartDate: string | null
+  scheduledEndDate: string | null
+  url: string | null
+  detail: string
+  categoryUUID: string | null
+  categoryLabel: string | null
+}[]

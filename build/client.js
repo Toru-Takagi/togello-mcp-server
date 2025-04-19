@@ -1,16 +1,16 @@
-const API_BASE_URL = "https://togello.api.toru-takagi.dev";
+const API_BASE_URL = 'https://togello.api.toru-takagi.dev';
 export const httpClient = {
     fetchURL: async ({ path }) => {
         const token = process.env.TOGELLO_API_TOKEN;
         if (!token) {
-            throw new Error("environment variable TOGELLO_API_TOKEN is not set");
+            throw new Error('environment variable TOGELLO_API_TOKEN is not set');
         }
         const url = `${API_BASE_URL}${path}`;
         const response = await fetch(url, {
-            method: "GET",
+            method: 'GET',
             headers: {
                 Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
             },
         });
         if (!response.ok) {
@@ -21,14 +21,14 @@ export const httpClient = {
     postJson: async ({ path, body }) => {
         const token = process.env.TOGELLO_API_TOKEN;
         if (!token) {
-            throw new Error("environment variable TOGELLO_API_TOKEN is not set");
+            throw new Error('environment variable TOGELLO_API_TOKEN is not set');
         }
         const url = `${API_BASE_URL}${path}`;
         const response = await fetch(url, {
-            method: "POST",
+            method: 'POST',
             headers: {
                 Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify(body),
         });
@@ -40,15 +40,15 @@ export const httpClient = {
     putJson: async ({ path, body }) => {
         const token = process.env.TOGELLO_API_TOKEN;
         if (!token) {
-            throw new Error("environment variable TOGELLO_API_TOKEN is not set");
+            throw new Error('environment variable TOGELLO_API_TOKEN is not set');
         }
         const url = `${API_BASE_URL}${path}`;
         const bodyString = body !== null ? JSON.stringify(body) : null;
         const response = await fetch(url, {
-            method: "PUT",
+            method: 'PUT',
             headers: {
                 Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
             },
             body: bodyString,
         });
