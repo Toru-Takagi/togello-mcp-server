@@ -21,7 +21,7 @@
     "typescript": "^5.8.3"
   },
   "bin": {
-    "togello": "./build/index.js"
+    "togello": "build/index.js"
   },
   "files": [
     "build"
