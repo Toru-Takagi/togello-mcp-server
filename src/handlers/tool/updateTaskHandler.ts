@@ -6,12 +6,14 @@ export type UpdateTaskHandlerArgs = {
   todoUUID: z.ZodString
   isCompleted: z.ZodBoolean
   scheduledStartDate: z.ZodOptional<z.ZodString>
+  scheduledEndDate: z.ZodOptional<z.ZodString>
   url: z.ZodOptional<z.ZodString>
 }
 
 type UpdateTaskRequest = {
   isCompleted: boolean
   scheduledStartDate?: string
+  scheduledEndDate?: string
   url?: string
 }
 
@@ -19,6 +21,7 @@ export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
   todoUUID,
   isCompleted,
   scheduledStartDate,
+  scheduledEndDate,
   url,
 }) => {
   try {
@@ -27,6 +30,7 @@ export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
       body: {
         isCompleted,
         scheduledStartDate,
+        scheduledEndDate,
         url,
       },
     })

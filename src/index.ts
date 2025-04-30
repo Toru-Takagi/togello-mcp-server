@@ -79,6 +79,10 @@ async function main() {
         .string()
         .optional()
         .describe('Scheduled start date in ISO format.'),
+      scheduledEndDate: z
+        .string()
+        .optional()
+        .describe('Scheduled end date in ISO format.'),
       url: z
         .string()
         .optional()
@@ -112,7 +116,8 @@ async function main() {
   )
   server.tool(
     'start-activity-log',
-    'Starts an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.',
+    // 'Starts an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.',
+    'Starts an activity log.',
     {
       activityItemName: z
         .string()
@@ -124,7 +129,8 @@ async function main() {
   )
   server.tool(
     'complete-activity-log',
-    'Completes an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.',
+    // 'Completes an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.',
+    'Completes an activity log.',
     {
       activityLogUUID: z
         .string()
@@ -141,3 +147,6 @@ main().catch((error) => {
   console.error('Fatal error in main():', error)
   process.exit(1)
 })
+
+// en:     'Starts an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.',
+// ja:     'アクティビティログを開始します。get-activity-log-listのendDateTimeがすべて値を持っている場合、何もしていないことを意味します。そのため、start-activity-logを呼び出すことができます。'

@@ -59,6 +59,10 @@ async function main() {
             .string()
             .optional()
             .describe('Scheduled start date in ISO format.'),
+        scheduledEndDate: z
+            .string()
+            .optional()
+            .describe('Scheduled end date in ISO format.'),
         url: z
             .string()
             .optional()
@@ -68,12 +72,16 @@ async function main() {
     server.tool('get-today-calendar', 'Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ', {}, getTodayCalendarHandler);
     server.tool('get-activity-item-list', 'Retrieves the list of activity items from the integration feature. Recognizes activity item UUID / item name', {}, getActivityItemListHandler);
     server.tool('get-activity-log-list', 'Retrieves the list of activity logs from the integration feature. Since it is a record of what the person has done, if all the end dates are filled in, this person is not doing anything now. If there is one with a null end date, there should be at most one, and if there is one, it means that the person is doing it now. Recognizes activity log UUID / start date and time / end date and time / item name.', {}, getActivityLogListHandler);
-    server.tool('start-activity-log', 'Starts an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.', {
+    server.tool('start-activity-log', 
+    // 'Starts an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.',
+    'Starts an activity log.', {
         activityItemName: z
             .string()
             .describe('Activity log name. Please specify the itemName obtained from get-activity-item-list. You cannot specify a value that is not in itemName, so this tool cannot be used.'),
     }, startActivityLogHandler);
-    server.tool('complete-activity-log', 'Completes an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.', {
+    server.tool('complete-activity-log', 
+    // 'Completes an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.',
+    'Completes an activity log.', {
         activityLogUUID: z
             .string()
             .describe('Activity log UUID. Please specify the activityLogUUID obtained from get-activity-log-list. You cannot specify a value that is not in activityLogUUID, so this tool cannot be used.'),
@@ -84,3 +92,5 @@ main().catch((error) => {
     console.error('Fatal error in main():', error);
     process.exit(1);
 });
+// en:     'Starts an activity log. If all the endDateTime of get-activity-log-list have values, it means that nothing is being done, so start-activity-log can be called.',
+// ja:     'アクティビティログを開始します。get-activity-log-listのendDateTimeがすべて値を持っている場合、何もしていないことを意味します。そのため、start-activity-logを呼び出すことができます。'
