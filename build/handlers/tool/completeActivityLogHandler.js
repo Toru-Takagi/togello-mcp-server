@@ -3,7 +3,7 @@ export const completeActivityLogHandler = async ({ activityLogUUID }) => {
     try {
         await httpClient.putJson({
             path: `/v2/integration/activity-logs/${activityLogUUID}/work-complete`,
-            body: null,
+            body: {},
         });
         return {
             content: [

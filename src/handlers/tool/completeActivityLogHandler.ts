@@ -10,9 +10,9 @@ export const completeActivityLogHandler: ToolCallback<
   CompleteActivityLogHandlerArgs
 > = async ({ activityLogUUID }) => {
   try {
-    await httpClient.putJson<void, null>({
+    await httpClient.putJson<void, Record<string, never>>({
       path: `/v2/integration/activity-logs/${activityLogUUID}/work-complete`,
-      body: null,
+      body: {},
     })
     return {
       content: [
