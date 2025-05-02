@@ -6,6 +6,7 @@ export type CreateTaskHandlerArgs = {
   taskName: z.ZodString
   categoryUUID: z.ZodOptional<z.ZodString>
   scheduledStartDate: z.ZodOptional<z.ZodString>
+  scheduledEndDate: z.ZodOptional<z.ZodString>
   url: z.ZodOptional<z.ZodString>
 }
 
@@ -13,6 +14,7 @@ type CreateTaskRequest = {
   label: string
   categoryUUID?: string
   scheduledStartDate?: string
+  scheduledEndDate?: string
   url?: string
 }
 
@@ -20,6 +22,7 @@ export const createTaskHandler: ToolCallback<CreateTaskHandlerArgs> = async ({
   taskName,
   categoryUUID,
   scheduledStartDate,
+  scheduledEndDate,
   url,
 }) => {
   try {
@@ -29,6 +32,7 @@ export const createTaskHandler: ToolCallback<CreateTaskHandlerArgs> = async ({
         label: taskName,
         categoryUUID: categoryUUID,
         scheduledStartDate: scheduledStartDate,
+        scheduledEndDate: scheduledEndDate,
         url: url,
       },
     })

@@ -4,6 +4,10 @@ export const getTodayCalendarHandler = async () => {
         const googleEvents = await httpClient.fetchURL({
             path: '/v2/integration/google-calendar/event',
         });
+        const tasks = await httpClient.fetchURL({
+            path: '/v2/integration/todo',
+        });
+        const filteredTasks = tasks.filter((task) => task.scheduledStartDate != null);
         return {
             content: [
                 {
@@ -18,6 +22,20 @@ export const getTodayCalendarHandler = async () => {
                         event.summary,
                         formatEventTime(event.start),
                         formatEventTime(event.end),
+                    ])
+                        .join(','),
+                },
+                {
+                    type: 'text',
+                    text: 'en: The following is a task. The following is the order:[task name, scheduled start date, scheduled end date]',
+                },
+                {
+                    type: 'text',
+                    text: filteredTasks
+                        .map((task) => [
+                        task.label,
+                        task.scheduledStartDate,
+                        task.scheduledEndDate,
                     ])
                         .join(','),
                 },

@@ -8,6 +8,12 @@ export const getTodayCalendarHandler: ToolCallback<
     const googleEvents = await httpClient.fetchURL<GoogleCalendarResponse>({
       path: '/v2/integration/google-calendar/event',
     })
+    const tasks = await httpClient.fetchURL<TodoListResponse>({
+      path: '/v2/integration/todo',
+    })
+    const filteredTasks = tasks.filter(
+      (task) => task.scheduledStartDate != null,
+    )
 
     return {
       content: [
@@ -23,6 +29,20 @@ export const getTodayCalendarHandler: ToolCallback<
               event.summary,
               formatEventTime(event.start),
               formatEventTime(event.end),
+            ])
+            .join(','),
+        },
+        {
+          type: 'text',
+          text: 'en: The following is a task. The following is the order:[task name, scheduled start date, scheduled end date]',
+        },
+        {
+          type: 'text',
+          text: filteredTasks
+            .map((task) => [
+              task.label,
+              task.scheduledStartDate,
+              task.scheduledEndDate,
             ])
             .join(','),
         },
@@ -84,3 +104,19 @@ const formatEventTime = (dateTime: EventDateTime): string => {
 
   return '不明な日時'
 }
+
+type TodoListResponse = {
+  todoUUID: string | null
+  todoSettingUUID: string | null
+  label: string
+  priorityNumber: number
+  completedAt: string | null
+  operatedAt: string
+  createdAt: string
+  scheduledStartDate: string | null
+  scheduledEndDate: string | null
+  url: string | null
+  detail: string
+  categoryUUID: string | null
+  categoryLabel: string | null
+}[]

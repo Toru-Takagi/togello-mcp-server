@@ -43,6 +43,10 @@ async function main() {
             .string()
             .optional()
             .describe('Scheduled start date in ISO format.'),
+        scheduledEndDate: z
+            .string()
+            .optional()
+            .describe('Scheduled end date in ISO format.'),
         url: z
             .string()
             .optional()
@@ -54,19 +58,19 @@ async function main() {
             .describe('Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it.'),
         isCompleted: z
             .boolean()
-            .describe('You can update the completion status of the task. If true, it is completed. If false, it can be reverted to incomplete.'),
+            .describe('You can update the completion status of the task. If true, it is completed.'),
         scheduledStartDate: z
             .string()
             .optional()
-            .describe('Scheduled start date in ISO format.'),
+            .describe('Scheduled start date in ISO format.If the user does not specify, the information obtained from get-tasks-list is passed.'),
         scheduledEndDate: z
             .string()
             .optional()
-            .describe('Scheduled end date in ISO format.'),
+            .describe('Scheduled end date in ISO format.If the user does not specify, the information obtained from get-tasks-list is passed.'),
         url: z
             .string()
             .optional()
-            .describe('Optional URL associated with the task.'),
+            .describe('Optional URL associated with the task.If the user does not specify, the information obtained from get-tasks-list is passed.'),
     }, updateTaskHandler);
     server.tool('get-todo-category-list', 'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID', {}, getTodoCategoryListHandler);
     server.tool('get-today-calendar', 'Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ', {}, getTodayCalendarHandler);

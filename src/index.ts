@@ -54,6 +54,10 @@ async function main() {
         .string()
         .optional()
         .describe('Scheduled start date in ISO format.'),
+      scheduledEndDate: z
+        .string()
+        .optional()
+        .describe('Scheduled end date in ISO format.'),
       url: z
         .string()
         .optional()
@@ -73,20 +77,26 @@ async function main() {
       isCompleted: z
         .boolean()
         .describe(
-          'You can update the completion status of the task. If true, it is completed. If false, it can be reverted to incomplete.',
+          'You can update the completion status of the task. If true, it is completed.',
         ),
       scheduledStartDate: z
         .string()
         .optional()
-        .describe('Scheduled start date in ISO format.'),
+        .describe(
+          'Scheduled start date in ISO format.If the user does not specify, the information obtained from get-tasks-list is passed.',
+        ),
       scheduledEndDate: z
         .string()
         .optional()
-        .describe('Scheduled end date in ISO format.'),
+        .describe(
+          'Scheduled end date in ISO format.If the user does not specify, the information obtained from get-tasks-list is passed.',
+        ),
       url: z
         .string()
         .optional()
-        .describe('Optional URL associated with the task.'),
+        .describe(
+          'Optional URL associated with the task.If the user does not specify, the information obtained from get-tasks-list is passed.',
+        ),
     },
     updateTaskHandler,
   )
