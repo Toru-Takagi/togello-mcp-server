@@ -6,6 +6,7 @@ import { completeActivityLogHandler } from './handlers/tool/completeActivityLogH
 import { createTaskHandler } from './handlers/tool/createTaskHandler.js';
 import { getActivityItemListHandler } from './handlers/tool/getActivityItemListHandler.js';
 import { getActivityLogListHandler } from './handlers/tool/getActivityLogListHandler.js';
+import { getJapanCurrentTimeHandler } from './handlers/tool/getJapanCurrentTimeHandler.js';
 import { getTodayCalendarHandler } from './handlers/tool/getTodayCalendarHandler.js';
 import { getTodoCategoryListHandler } from './handlers/tool/getTodoCategoryListHandler.js';
 import { getTodoListHandler } from './handlers/tool/getTodoListHandler.js';
@@ -90,6 +91,7 @@ async function main() {
             .string()
             .describe('Activity log UUID. Please specify the activityLogUUID obtained from get-activity-log-list. You cannot specify a value that is not in activityLogUUID, so this tool cannot be used.'),
     }, completeActivityLogHandler);
+    server.tool('get-japan-current-time', 'Returns the current time in Japan (JST).', {}, getJapanCurrentTimeHandler);
     await server.connect(transport);
 }
 main().catch((error) => {
