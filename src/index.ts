@@ -39,7 +39,9 @@ async function main() {
   server.tool(
     'get-tasks-list',
     'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / scheduled start date and time / scheduled end date and time / priority / category',
-    {},
+    {
+      categoryUUIDs: z.array(z.string()).optional().describe('Filters tasks by specified category UUIDs.'),
+    },
     getTodoListHandler,
   )
   server.tool(

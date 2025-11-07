@@ -33,7 +33,9 @@ async function main() {
     //   "togello://activity-item-list",
     //   categoryListHandler
     // );
-    server.tool('get-tasks-list', 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / scheduled start date and time / scheduled end date and time / priority / category', {}, getTodoListHandler);
+    server.tool('get-tasks-list', 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / scheduled start date and time / scheduled end date and time / priority / category', {
+        categoryUUIDs: z.array(z.string()).optional().describe('Filters tasks by specified category UUIDs.'),
+    }, getTodoListHandler);
     server.tool('create-task', 'Creates a new task in the TODO feature.', {
         taskName: z.string().describe('create task name'),
         categoryUUID: z

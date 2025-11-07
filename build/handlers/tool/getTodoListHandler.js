@@ -1,8 +1,12 @@
 import { httpClient } from '../../client.js';
-export const getTodoListHandler = async () => {
+export const getTodoListHandler = async ({ categoryUUIDs }) => {
     try {
+        const categoryUUIDArray = categoryUUIDs ?? [];
+        const qs = categoryUUIDArray.length > 0
+            ? `?${categoryUUIDArray.map((u) => `categoryUUID=${encodeURIComponent(u)}`).join('&')}`
+            : '';
         const tasks = await httpClient.fetchURL({
-            path: '/v2/integration/todo',
+            path: `/v2/integration/todo${qs}`,
         });
         return {
             content: [

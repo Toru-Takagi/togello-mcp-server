@@ -1,12 +1,21 @@
 import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { z } from 'zod'
 import { httpClient } from '../../client.js'
 
+export type GetTodoListHandlerArgs = {
+  categoryUUIDs: z.ZodOptional<z.ZodArray<z.ZodString>>
+}
+
 export const getTodoListHandler: ToolCallback<
-  Record<string, never>
-> = async () => {
+  GetTodoListHandlerArgs
+> = async ({ categoryUUIDs }) => {
   try {
+    const categoryUUIDArray = (categoryUUIDs as unknown as string[] | undefined) ?? []
+    const qs = categoryUUIDArray.length > 0
+      ? `?${categoryUUIDArray.map((u: string) => `categoryUUID=${encodeURIComponent(u)}`).join('&')}`
+      : ''
     const tasks = await httpClient.fetchURL<TodoListResponse>({
-      path: '/v2/integration/todo',
+      path: `/v2/integration/todo${qs}`,
     })
 
     return {
