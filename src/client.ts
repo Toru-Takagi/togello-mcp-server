@@ -55,7 +55,12 @@ export const httpClient: HttpClient = {
       throw new Error(`response status: ${response.status}`)
     }
 
-    return (await response.json()) as T
+    // 空レスポンスの堅牢な処理
+    const text = await response.text()
+    if (!text || text.trim() === '') {
+      return undefined as T
+    }
+    return JSON.parse(text) as T
   },
 
   putJson: async <T, U>({ path, body }: PostServerProps<U>): Promise<T> => {
@@ -78,9 +83,11 @@ export const httpClient: HttpClient = {
       throw new Error(`response status: ${response.status}`)
     }
 
-    if (response.headers.get('content-length') === '0') {
+    // 空レスポンスの堅牢な処理
+    const text = await response.text()
+    if (!text || text.trim() === '') {
       return undefined as T
     }
-    return (await response.json()) as T
+    return JSON.parse(text) as T
   },
 }

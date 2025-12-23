@@ -35,7 +35,12 @@ export const httpClient = {
         if (!response.ok) {
             throw new Error(`response status: ${response.status}`);
         }
-        return (await response.json());
+        // 空レスポンスの堅牢な処理
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+            return undefined;
+        }
+        return JSON.parse(text);
     },
     putJson: async ({ path, body }) => {
         const token = process.env.TOGELLO_API_TOKEN;
@@ -55,9 +60,11 @@ export const httpClient = {
         if (!response.ok) {
             throw new Error(`response status: ${response.status}`);
         }
-        if (response.headers.get('content-length') === '0') {
+        // 空レスポンスの堅牢な処理
+        const text = await response.text();
+        if (!text || text.trim() === '') {
             return undefined;
         }
-        return (await response.json());
+        return JSON.parse(text);
     },
 };
