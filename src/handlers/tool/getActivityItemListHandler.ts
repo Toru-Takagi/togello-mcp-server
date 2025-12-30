@@ -11,6 +11,10 @@ export const getActivityItemListHandler: ToolCallback<
       path: '/v2/integration/activity-items',
     })
 
+    const enabledActivityItemList = activityItemList.filter(
+      (item) => item.enabled === 'true',
+    )
+
     return {
       content: [
         {
@@ -20,7 +24,7 @@ export const getActivityItemListHandler: ToolCallback<
         },
         {
           type: 'text',
-          text: activityItemList
+          text: enabledActivityItemList
             .map((item) => [item.activityItemUUID, item.itemName])
             .join(','),
         },
@@ -42,4 +46,5 @@ export const getActivityItemListHandler: ToolCallback<
 type ActivityItemListResponse = {
   activityItemUUID: string
   itemName: string
+  enabled: string
 }

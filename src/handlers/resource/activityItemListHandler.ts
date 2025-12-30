@@ -12,6 +12,10 @@ export const activityItemListHandler: ReadResourceCallback = async (
       path: '/v2/integration/activity-items',
     })
 
+    const enabledActivityItemList = activityItemList.filter(
+      (item) => item.enabled === 'true',
+    )
+
     return {
       contents: [
         {
@@ -23,7 +27,7 @@ export const activityItemListHandler: ReadResourceCallback = async (
         {
           type: 'text',
           uri: uri.href,
-          text: activityItemList
+          text: enabledActivityItemList
             .map((item) => [item.activityItemUUID, item.itemName])
             .join(','),
         },
@@ -46,4 +50,5 @@ export const activityItemListHandler: ReadResourceCallback = async (
 type ActivityItemListResponse = {
   activityItemUUID: string
   itemName: string
+  enabled: string
 }

@@ -4,6 +4,7 @@ export const activityItemListHandler = async (uri, _options) => {
         const activityItemList = await httpClient.fetchURL({
             path: '/v2/integration/activity-items',
         });
+        const enabledActivityItemList = activityItemList.filter((item) => item.enabled === 'true');
         return {
             contents: [
                 {
@@ -15,7 +16,7 @@ export const activityItemListHandler = async (uri, _options) => {
                 {
                     type: 'text',
                     uri: uri.href,
-                    text: activityItemList
+                    text: enabledActivityItemList
                         .map((item) => [item.activityItemUUID, item.itemName])
                         .join(','),
                 },
