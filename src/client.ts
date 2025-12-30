@@ -1,4 +1,6 @@
-const API_BASE_URL = 'https://togello.api.toru-takagi.dev'
+import { getUpstreamToken } from './upstreamTokenContext.js'
+
+const API_BASE_URL = process.env.TOGELLO_API_BASE_URL ?? 'https://togello.api.toru-takagi.dev'
 
 type FetchServerProps = {
   path: string
@@ -14,12 +16,17 @@ type HttpClient = {
   putJson: <T, U>(props: PostServerProps<U>) => Promise<T>
 }
 
+function getApiTokenOrThrow(): string {
+  const token = getUpstreamToken() ?? process.env.TOGELLO_API_TOKEN
+  if (!token) {
+    throw new Error('API token not available from upstream context or TOGELLO_API_TOKEN environment variable')
+  }
+  return token
+}
+
 export const httpClient: HttpClient = {
   fetchURL: async <T>({ path }: FetchServerProps): Promise<T> => {
-    const token = process.env.TOGELLO_API_TOKEN
-    if (!token) {
-      throw new Error('environment variable TOGELLO_API_TOKEN is not set')
-    }
+    const token = getApiTokenOrThrow()
 
     const url = `${API_BASE_URL}${path}`
     const response = await fetch(url, {
@@ -37,10 +44,7 @@ export const httpClient: HttpClient = {
   },
 
   postJson: async <T, U>({ path, body }: PostServerProps<U>): Promise<T> => {
-    const token = process.env.TOGELLO_API_TOKEN
-    if (!token) {
-      throw new Error('environment variable TOGELLO_API_TOKEN is not set')
-    }
+    const token = getApiTokenOrThrow()
 
     const url = `${API_BASE_URL}${path}`
     const response = await fetch(url, {
@@ -64,10 +68,7 @@ export const httpClient: HttpClient = {
   },
 
   putJson: async <T, U>({ path, body }: PostServerProps<U>): Promise<T> => {
-    const token = process.env.TOGELLO_API_TOKEN
-    if (!token) {
-      throw new Error('environment variable TOGELLO_API_TOKEN is not set')
-    }
+    const token = getApiTokenOrThrow()
 
     const url = `${API_BASE_URL}${path}`
     const bodyString = body !== null ? JSON.stringify(body) : '{}'

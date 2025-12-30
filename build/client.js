@@ -1,10 +1,15 @@
-const API_BASE_URL = 'https://togello.api.toru-takagi.dev';
+import { getUpstreamToken } from './upstreamTokenContext.js';
+const API_BASE_URL = process.env.TOGELLO_API_BASE_URL ?? 'https://togello.api.toru-takagi.dev';
+function getApiTokenOrThrow() {
+    const token = getUpstreamToken() ?? process.env.TOGELLO_API_TOKEN;
+    if (!token) {
+        throw new Error('API token not available from upstream context or TOGELLO_API_TOKEN environment variable');
+    }
+    return token;
+}
 export const httpClient = {
     fetchURL: async ({ path }) => {
-        const token = process.env.TOGELLO_API_TOKEN;
-        if (!token) {
-            throw new Error('environment variable TOGELLO_API_TOKEN is not set');
-        }
+        const token = getApiTokenOrThrow();
         const url = `${API_BASE_URL}${path}`;
         const response = await fetch(url, {
             method: 'GET',
@@ -19,10 +24,7 @@ export const httpClient = {
         return (await response.json());
     },
     postJson: async ({ path, body }) => {
-        const token = process.env.TOGELLO_API_TOKEN;
-        if (!token) {
-            throw new Error('environment variable TOGELLO_API_TOKEN is not set');
-        }
+        const token = getApiTokenOrThrow();
         const url = `${API_BASE_URL}${path}`;
         const response = await fetch(url, {
             method: 'POST',
@@ -43,10 +45,7 @@ export const httpClient = {
         return JSON.parse(text);
     },
     putJson: async ({ path, body }) => {
-        const token = process.env.TOGELLO_API_TOKEN;
-        if (!token) {
-            throw new Error('environment variable TOGELLO_API_TOKEN is not set');
-        }
+        const token = getApiTokenOrThrow();
         const url = `${API_BASE_URL}${path}`;
         const bodyString = body !== null ? JSON.stringify(body) : '{}';
         const response = await fetch(url, {
