@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "togello-mcp-server",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "main": "index.js",
   "scripts": {
     "build": "tsc && chmod 755 build/index.js",
