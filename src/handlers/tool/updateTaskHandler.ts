@@ -8,6 +8,7 @@ export type UpdateTaskHandlerArgs = {
   scheduledStartDate: z.ZodOptional<z.ZodString>
   scheduledEndDate: z.ZodOptional<z.ZodString>
   url: z.ZodOptional<z.ZodString>
+  detail: z.ZodOptional<z.ZodString>
 }
 
 type UpdateTaskRequest = {
@@ -15,6 +16,7 @@ type UpdateTaskRequest = {
   scheduledStartDate?: string
   scheduledEndDate?: string
   url?: string
+  detail?: string
 }
 
 export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
@@ -23,6 +25,7 @@ export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
   scheduledStartDate,
   scheduledEndDate,
   url,
+  detail,
 }) => {
   try {
     await httpClient.putJson<null, UpdateTaskRequest>({
@@ -32,6 +35,7 @@ export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
         scheduledStartDate,
         scheduledEndDate,
         url,
+        detail,
       },
     })
     return {

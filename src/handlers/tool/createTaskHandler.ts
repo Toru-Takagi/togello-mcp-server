@@ -8,6 +8,7 @@ export type CreateTaskHandlerArgs = {
   scheduledStartDate: z.ZodOptional<z.ZodString>
   scheduledEndDate: z.ZodOptional<z.ZodString>
   url: z.ZodOptional<z.ZodString>
+  detail: z.ZodOptional<z.ZodString>
 }
 
 type CreateTaskRequest = {
@@ -16,6 +17,7 @@ type CreateTaskRequest = {
   scheduledStartDate?: string
   scheduledEndDate?: string
   url?: string
+  detail?: string
 }
 
 export const createTaskHandler: ToolCallback<CreateTaskHandlerArgs> = async ({
@@ -24,6 +26,7 @@ export const createTaskHandler: ToolCallback<CreateTaskHandlerArgs> = async ({
   scheduledStartDate,
   scheduledEndDate,
   url,
+  detail,
 }) => {
   try {
     await httpClient.postJson<null, CreateTaskRequest>({
@@ -34,6 +37,7 @@ export const createTaskHandler: ToolCallback<CreateTaskHandlerArgs> = async ({
         scheduledStartDate: scheduledStartDate,
         scheduledEndDate: scheduledEndDate,
         url: url,
+        detail: detail,
       },
     })
     return {

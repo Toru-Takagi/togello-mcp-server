@@ -1,5 +1,5 @@
 import { httpClient } from '../../client.js';
-export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartDate, scheduledEndDate, url, }) => {
+export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartDate, scheduledEndDate, url, detail, }) => {
     try {
         await httpClient.putJson({
             path: `/v2/integration/todo/${todoUUID}`,
@@ -8,6 +8,7 @@ export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartD
                 scheduledStartDate,
                 scheduledEndDate,
                 url,
+                detail,
             },
         });
         return {

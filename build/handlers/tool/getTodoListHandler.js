@@ -13,7 +13,7 @@ export const getTodoListHandler = async ({ categoryUUIDs }) => {
                 {
                     type: 'text',
                     text: `The following is a single task represented in the order:
-[todo uuid, label of the task, scheduled start date, scheduled end date, priority, category of the task, URL associated with the task]`,
+[todo uuid, label of the task, detail of the task, scheduled start date, scheduled end date, priority, category of the task, URL associated with the task]`,
                 },
                 {
                     type: 'text',
@@ -25,6 +25,7 @@ export const getTodoListHandler = async ({ categoryUUIDs }) => {
                         .map((todo) => [
                         todo.todoUUID,
                         todo.label,
+                        todo.detail,
                         todo.scheduledStartDate,
                         todo.scheduledEndDate,
                         todo.priorityNumber,

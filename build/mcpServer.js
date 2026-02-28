@@ -29,7 +29,7 @@ export function createMcpServer(options = {}) {
             tools: {},
         },
     });
-    server.tool('get-tasks-list', 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / scheduled start date and time / scheduled end date and time / priority / category', {
+    server.tool('get-tasks-list', 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / detail / scheduled start date and time / scheduled end date and time / priority / category', {
         categoryUUIDs: z.array(z.string()).optional().describe('Filters tasks by specified category UUIDs.'),
     }, withUpstreamToken(getTodoListHandler, options.resolveUpstreamToken));
     server.tool('create-task', 'Creates a new task in the TODO feature.', {
@@ -41,6 +41,7 @@ export function createMcpServer(options = {}) {
         scheduledStartDate: z.string().optional().describe('Scheduled start date in ISO format.'),
         scheduledEndDate: z.string().optional().describe('Scheduled end date in ISO format.'),
         url: z.string().optional().describe('Optional URL associated with the task.'),
+        detail: z.string().optional().describe('Optional detail associated with the task.'),
     }, withUpstreamToken(createTaskHandler, options.resolveUpstreamToken));
     server.tool('update-task', 'Updates a task in the TODO feature.', {
         todoUUID: z
@@ -61,6 +62,10 @@ export function createMcpServer(options = {}) {
             .string()
             .optional()
             .describe('Optional URL associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.'),
+        detail: z
+            .string()
+            .optional()
+            .describe('Optional detail associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.'),
     }, withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken));
     server.tool('get-todo-category-list', 'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID', {}, withUpstreamToken(getTodoCategoryListHandler, options.resolveUpstreamToken));
     server.tool('get-today-calendar', 'Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ', {}, withUpstreamToken(getTodayCalendarHandler, options.resolveUpstreamToken));

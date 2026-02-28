@@ -40,7 +40,7 @@ export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer
 
   server.tool(
     'get-tasks-list',
-    'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / scheduled start date and time / scheduled end date and time / priority / category',
+    'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / detail / scheduled start date and time / scheduled end date and time / priority / category',
     {
       categoryUUIDs: z.array(z.string()).optional().describe('Filters tasks by specified category UUIDs.'),
     },
@@ -58,6 +58,7 @@ export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer
       scheduledStartDate: z.string().optional().describe('Scheduled start date in ISO format.'),
       scheduledEndDate: z.string().optional().describe('Scheduled end date in ISO format.'),
       url: z.string().optional().describe('Optional URL associated with the task.'),
+      detail: z.string().optional().describe('Optional detail associated with the task.'),
     },
     withUpstreamToken(createTaskHandler, options.resolveUpstreamToken),
   )
@@ -90,6 +91,12 @@ export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer
         .optional()
         .describe(
           'Optional URL associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.',
+        ),
+      detail: z
+        .string()
+        .optional()
+        .describe(
+          'Optional detail associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.',
         ),
     },
     withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken),
