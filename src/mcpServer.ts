@@ -7,9 +7,11 @@ import { getActivityItemListHandler } from './handlers/tool/getActivityItemListH
 import { getActivityLogListHandler } from './handlers/tool/getActivityLogListHandler.js'
 import { getJapanCurrentTimeHandler } from './handlers/tool/getJapanCurrentTimeHandler.js'
 import { getTodayCalendarHandler } from './handlers/tool/getTodayCalendarHandler.js'
+import { getTodayMemoHandler } from './handlers/tool/getTodayMemoHandler.js'
 import { getTodoCategoryListHandler } from './handlers/tool/getTodoCategoryListHandler.js'
 import { getTodoListHandler } from './handlers/tool/getTodoListHandler.js'
 import { startActivityLogHandler } from './handlers/tool/startActivityLogHandler.js'
+import { updateTodayMemoHandler } from './handlers/tool/updateTodayMemoHandler.js'
 import { updateTaskHandler } from './handlers/tool/updateTaskHandler.js'
 
 export type UpstreamTokenResolver = (sessionId?: string) => string | undefined
@@ -100,6 +102,22 @@ export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer
         ),
     },
     withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken),
+  )
+  server.tool(
+    'get-today-memo',
+    'Retrieves today\'s memo from the calendar date memo feature. Recognizes target date and memo content.',
+    {},
+    withUpstreamToken(getTodayMemoHandler, options.resolveUpstreamToken),
+  )
+  server.tool(
+    'update-today-memo',
+    'Updates today\'s memo in the calendar date memo feature.',
+    {
+      memo: z
+        .string()
+        .describe('Memo content for today. Pass an empty or whitespace-only string to clear today\'s memo.'),
+    },
+    withUpstreamToken(updateTodayMemoHandler, options.resolveUpstreamToken),
   )
   server.tool(
     'get-todo-category-list',
