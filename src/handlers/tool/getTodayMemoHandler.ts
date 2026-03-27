@@ -13,11 +13,7 @@ export const getTodayMemoHandler: ToolCallback<
       content: [
         {
           type: 'text',
-          text: 'The following is today memo information in the order: [target date, memo]',
-        },
-        {
-          type: 'text',
-          text: `${todayMemo.targetDate},${todayMemo.memo ?? ''}`,
+          text: `targetDate: ${todayMemo.targetDate}\nmemo: ${todayMemo.memo ?? ''}`,
         },
       ],
     }
