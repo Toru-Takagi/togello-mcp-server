@@ -5,12 +5,17 @@ import { completeActivityLogHandler } from './handlers/tool/completeActivityLogH
 import { createTaskHandler } from './handlers/tool/createTaskHandler.js';
 import { getActivityItemListHandler } from './handlers/tool/getActivityItemListHandler.js';
 import { getActivityLogListHandler } from './handlers/tool/getActivityLogListHandler.js';
+import { getCalendarDateMemoHandler } from './handlers/tool/getCalendarDateMemoHandler.js';
 import { getJapanCurrentTimeHandler } from './handlers/tool/getJapanCurrentTimeHandler.js';
 import { getTodayCalendarHandler } from './handlers/tool/getTodayCalendarHandler.js';
 import { getTodoCategoryListHandler } from './handlers/tool/getTodoCategoryListHandler.js';
 import { getTodoListHandler } from './handlers/tool/getTodoListHandler.js';
 import { startActivityLogHandler } from './handlers/tool/startActivityLogHandler.js';
+import { updateCalendarDateMemoHandler } from './handlers/tool/updateCalendarDateMemoHandler.js';
 import { updateTaskHandler } from './handlers/tool/updateTaskHandler.js';
+const calendarDateMemoDateSchema = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD');
 function withUpstreamToken(cb, resolveUpstreamToken) {
     return async (args, extra) => {
         const token = resolveUpstreamToken?.(extra.sessionId);
@@ -67,6 +72,15 @@ export function createMcpServer(options = {}) {
             .optional()
             .describe('Optional detail associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.'),
     }, withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken));
+    server.tool('get-calendar-date-memo', 'Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.', {
+        date: calendarDateMemoDateSchema.describe('Target date in YYYY-MM-DD format.'),
+    }, withUpstreamToken(getCalendarDateMemoHandler, options.resolveUpstreamToken));
+    server.tool('update-calendar-date-memo', 'Updates a calendar date memo for the specified date.', {
+        date: calendarDateMemoDateSchema.describe('Target date in YYYY-MM-DD format.'),
+        memo: z
+            .string()
+            .describe('Memo content for the date. Pass an empty or whitespace-only string to clear the memo.'),
+    }, withUpstreamToken(updateCalendarDateMemoHandler, options.resolveUpstreamToken));
     server.tool('get-todo-category-list', 'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID', {}, withUpstreamToken(getTodoCategoryListHandler, options.resolveUpstreamToken));
     server.tool('get-today-calendar', 'Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ', {}, withUpstreamToken(getTodayCalendarHandler, options.resolveUpstreamToken));
     server.tool('get-activity-item-list', 'Retrieves the list of activity items from the integration feature. Recognizes activity item UUID / item name', {}, withUpstreamToken(getActivityItemListHandler, options.resolveUpstreamToken));
