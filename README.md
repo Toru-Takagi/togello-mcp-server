@@ -32,8 +32,8 @@ https://togello.com/sign
 - get-tasks-list: TODO 機能で未完了のタスクを取得します。タスク UUID / タスク名 / 詳細(detail) / 予定開始日時 / 予定終了日時 / 優先度 / カテゴリ を認識できます。
 - create-task: TODO 機能で新しいタスクを作成します。タスク名（taskName）を指定する必要があります。カテゴリー UUID（categoryUUID）、予定開始日時（scheduledStartDate）、URL（url）、詳細（detail）もオプションで指定できます。
 - update-task: TODO 機能でタスクを更新します。タスクの完了状態に加えて詳細（detail）も更新できます。get-tasks-list で取得したタスク UUID を指定する必要があります。
-- get-today-memo: カレンダー日付メモ機能から今日のメモを取得します。対象日付とメモ内容を認識できます。
-- update-today-memo: カレンダー日付メモ機能の今日のメモを更新します。`memo` を指定し、空文字または空白のみを渡すと今日のメモを削除できます。
+- get-calendar-date-memo: カレンダー日付メモ機能から指定日のメモを取得します。`date` とメモ内容を認識できます。
+- update-calendar-date-memo: カレンダー日付メモ機能の指定日のメモを更新します。`date` と `memo` を指定し、空文字または空白のみを渡すとその日のメモを削除できます。
 - get-todo-category-list: TODO 機能からカテゴリーリストを取得します。カテゴリー名 / カテゴリー UUID を認識できます。
 - get-today-calendar: 連携している Google カレンダーの昨日/今日/明日の予定を取得します。予定名 / 開始日時 / 終了日時 を認識できます。
 - get-activity-item-list: 統合機能からアクティビティ項目のリストを取得します。アクティビティ項目 UUID / 項目名 を認識できます。
