@@ -15,10 +15,12 @@ export const updateCalendarDateMemoHandler: ToolCallback<
   UpdateCalendarDateMemoHandlerArgs
 > = async ({ date, memo }) => {
   try {
+    const normalizedMemo = memo.trim()
+
     await httpClient.putJson<null, UpdateCalendarDateMemoRequest>({
       path: `/v2/integration/calendar-date-memo/${encodeURIComponent(date)}`,
       body: {
-        memo,
+        memo: normalizedMemo,
       },
     })
     return {

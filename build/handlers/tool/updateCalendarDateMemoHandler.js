@@ -1,10 +1,11 @@
 import { httpClient } from '../../client.js';
 export const updateCalendarDateMemoHandler = async ({ date, memo }) => {
     try {
+        const normalizedMemo = memo.trim();
         await httpClient.putJson({
             path: `/v2/integration/calendar-date-memo/${encodeURIComponent(date)}`,
             body: {
-                memo,
+                memo: normalizedMemo,
             },
         });
         return {

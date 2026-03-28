@@ -20,6 +20,10 @@ export type CreateMcpServerOptions = {
   resolveUpstreamToken?: UpstreamTokenResolver
 }
 
+const calendarDateMemoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD')
+
 function withUpstreamToken(cb: any, resolveUpstreamToken?: UpstreamTokenResolver): any {
   return async (args: any, extra: { sessionId?: string }) => {
     const token = resolveUpstreamToken?.(extra.sessionId)
@@ -107,7 +111,7 @@ export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer
     'get-calendar-date-memo',
     'Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.',
     {
-      date: z.string().describe('Target date in YYYY-MM-DD format.'),
+      date: calendarDateMemoDateSchema.describe('Target date in YYYY-MM-DD format.'),
     },
     withUpstreamToken(getCalendarDateMemoHandler, options.resolveUpstreamToken),
   )
@@ -115,7 +119,7 @@ export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer
     'update-calendar-date-memo',
     'Updates a calendar date memo for the specified date.',
     {
-      date: z.string().describe('Target date in YYYY-MM-DD format.'),
+      date: calendarDateMemoDateSchema.describe('Target date in YYYY-MM-DD format.'),
       memo: z
         .string()
         .describe('Memo content for the date. Pass an empty or whitespace-only string to clear the memo.'),
