@@ -1,14 +1,13 @@
-import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { z } from 'zod'
 import { httpClient } from '../../client.js'
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
 export type UpdateTaskHandlerArgs = {
-  todoUUID: z.ZodString
-  isCompleted: z.ZodBoolean
-  scheduledStartDate: z.ZodOptional<z.ZodString>
-  scheduledEndDate: z.ZodOptional<z.ZodString>
-  url: z.ZodOptional<z.ZodString>
-  detail: z.ZodOptional<z.ZodString>
+  todoUUID: string
+  isCompleted: boolean
+  scheduledStartDate?: string
+  scheduledEndDate?: string
+  url?: string
+  detail?: string
 }
 
 type UpdateTaskRequest = {
@@ -19,17 +18,17 @@ type UpdateTaskRequest = {
   detail?: string
 }
 
-export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
+export const updateTaskHandler = async ({
   todoUUID,
   isCompleted,
   scheduledStartDate,
   scheduledEndDate,
   url,
   detail,
-}) => {
+}: UpdateTaskHandlerArgs) => {
   try {
     await httpClient.putJson<null, UpdateTaskRequest>({
-      path: `/v2/integration/todo/${todoUUID}`,
+      path: `/v2/integration/todo/${encodeURIComponent(todoUUID)}`,
       body: {
         isCompleted,
         scheduledStartDate,
@@ -38,25 +37,13 @@ export const updateTaskHandler: ToolCallback<UpdateTaskHandlerArgs> = async ({
         detail,
       },
     })
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Task status updated successfully. Task is now ${
-            isCompleted ? 'completed' : 'incomplete'
-          }.`,
-        },
-      ],
-    }
+    return jsonToolResponse({
+      todoUUID,
+      isCompleted,
+      updated: true,
+    })
   } catch (error) {
     console.error('Error updating task:', error)
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error updating task: ${error}`,
-        },
-      ],
-    }
+    return errorToolResponse('Error updating task')
   }
 }

@@ -1,56 +1,91 @@
 # Togello MCP Server
 
-This server implements the Model Context Protocol (MCP) for managing context in applications.
+Togello MCP Server exposes Togello tasks, categories, calendar memos, Google Calendar events, activity items, and activity logs through the Model Context Protocol.
 
 https://togello.com/sign
 
-## Using npm
+## Requirements
 
-```
+- Node.js 22 or later
+- A Togello API token
+
+## Local MCP With npm
+
+Use this for desktop clients and local developer tools that launch MCP servers over stdio.
+
+```json
 {
   "mcpServers": {
     "togello": {
       "command": "npx",
       "args": ["-y", "togello-mcp-server"],
       "env": {
-        "TOGELLO_API_TOKEN": "replace_with_your_token",
+        "TOGELLO_API_TOKEN": "replace_with_your_token"
       }
     }
   }
 }
 ```
 
-## Features
+## Remote MCP
 
-### Resources
+Remote mode exposes an SSE endpoint at `/sse` and a message endpoint at `/message`.
 
-- category-list: タスクのカテゴリー一覧を提供します。URI: `togello://category-list`
-- activity-item-list: アクティビティ項目の一覧を提供します。URI: `togello://activity-item-list`
+```bash
+TOGELLO_MCP_MODE=remote \
+TOGELLO_MCP_AUTH_MODE=passthrough \
+TOGELLO_MCP_HOST=0.0.0.0 \
+TOGELLO_MCP_PORT=8081 \
+npm start
+```
 
-### Tools
+Connect remote MCP clients to:
 
-- get-tasks-list: TODO 機能で未完了のタスクを取得します。タスク UUID / タスク名 / 詳細(detail) / 予定開始日時 / 予定終了日時 / 優先度 / カテゴリ を認識できます。
-- create-task: TODO 機能で新しいタスクを作成します。タスク名（taskName）を指定する必要があります。カテゴリー UUID（categoryUUID）、予定開始日時（scheduledStartDate）、URL（url）、詳細（detail）もオプションで指定できます。
-- update-task: TODO 機能でタスクを更新します。タスクの完了状態に加えて詳細（detail）も更新できます。get-tasks-list で取得したタスク UUID を指定する必要があります。
-- get-calendar-date-memo: カレンダー日付メモ機能から指定日のメモを取得します。`date` とメモ内容を認識できます。
-- update-calendar-date-memo: カレンダー日付メモ機能の指定日のメモを更新します。`date` と `memo` を指定し、空文字または空白のみを渡すとその日のメモを削除できます。
-- get-todo-category-list: TODO 機能からカテゴリーリストを取得します。カテゴリー名 / カテゴリー UUID を認識できます。
-- get-today-calendar: 連携している Google カレンダーの昨日/今日/明日の予定を取得します。予定名 / 開始日時 / 終了日時 を認識できます。
-- get-activity-item-list: 統合機能からアクティビティ項目のリストを取得します。アクティビティ項目 UUID / 項目名 を認識できます。
-- get-activity-log-list: 統合機能からアクティビティログのリストを取得します。すべてのログの終了日時が入力されている場合、現在何も実行していないことを意味します。終了日時が null のものがある場合（最大で 1 つ）、現在その活動を実行中であることを意味します。アクティビティログ UUID / 開始日時 / 終了日時 / 項目名 を認識できます。
-- start-activity-log: アクティビティログを開始します。`get-activity-item-list` で取得した項目名（`activityItemName`）を指定する必要があります。`get-activity-log-list` で取得したログリストの全ての `endDateTime` に値がある場合（現在実行中のアクティビティがない場合）に呼び出すことができます。
-- complete-activity-log: アクティビティログを完了します。`get-activity-log-list` で取得した、現在実行中のアクティビティログの UUID（`activityLogUUID`）を指定する必要があります。
-- get-japan-current-time: Returns the current time in Japan (JST). No parameters are required.
+```text
+https://your-domain.example/sse
+```
+
+`passthrough` auth expects each remote client request to send its own Togello API token as an `Authorization: Bearer ...` header. Use this mode for published remote MCP servers.
+
+`env` auth uses one server-side `TOGELLO_API_TOKEN` for every remote client. It is intended only for trusted local or single-user deployments. When binding to a non-local host, `TOGELLO_MCP_AUTH_MODE=env` also requires `TOGELLO_MCP_ALLOW_ENV_AUTH=true` so public deployments cannot enable shared-token auth by accident.
+
+ChatGPT developer mode can add remote MCP servers that use SSE. For production ChatGPT apps or connectors, use `passthrough` auth or a deployment that authenticates each user separately before forwarding requests to Togello.
+
+## Tools
+
+Read-only tools include MCP `readOnlyHint` annotations and return stable JSON in both `structuredContent` and text content.
+
+- `get-tasks-list`: Retrieves incomplete TODO tasks. Optional `categoryUUIDs` filters by category UUID.
+- `get-calendar-date-memo`: Retrieves a calendar date memo for a `YYYY-MM-DD` date.
+- `get-todo-category-list`: Retrieves TODO categories.
+- `get-today-calendar`: Retrieves linked Google Calendar events and scheduled tasks.
+- `get-activity-item-list`: Retrieves enabled activity items.
+- `get-activity-log-list`: Retrieves activity logs.
+- `get-japan-current-time`: Returns the current time in Japan.
+
+Write tools return JSON. Failed tool responses also return JSON and are marked with `isError: true`.
+
+- `create-task`: Creates a TODO task.
+- `update-task`: Updates a TODO task.
+- `update-calendar-date-memo`: Updates or clears a calendar date memo.
+- `start-activity-log`: Starts an activity log.
+- `complete-activity-log`: Completes an activity log.
+
+## Development
+
+```bash
+npm install
+npm run build
+```
 
 ## MCP Review
 
-Certified  
-https://mcpreview.com/mcp-servers/toru-takagi/togello-mcp-server  
+Certified
+https://mcpreview.com/mcp-servers/toru-takagi/togello-mcp-server
 
+## Publish
 
-## publish
-
-```
+```bash
 npm run build
 npm version patch
 npm publish --access public

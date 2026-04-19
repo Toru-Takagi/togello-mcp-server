@@ -1,19 +1,19 @@
-import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { z } from 'zod'
 import { httpClient } from '../../client.js'
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
 export type UpdateCalendarDateMemoHandlerArgs = {
-  date: z.ZodString
-  memo: z.ZodString
+  date: string
+  memo: string
 }
 
 type UpdateCalendarDateMemoRequest = {
   memo: string
 }
 
-export const updateCalendarDateMemoHandler: ToolCallback<
-  UpdateCalendarDateMemoHandlerArgs
-> = async ({ date, memo }) => {
+export const updateCalendarDateMemoHandler = async ({
+  date,
+  memo,
+}: UpdateCalendarDateMemoHandlerArgs) => {
   try {
     const normalizedMemo = memo.trim()
 
@@ -23,24 +23,13 @@ export const updateCalendarDateMemoHandler: ToolCallback<
         memo: normalizedMemo,
       },
     })
-    return {
-      content: [
-        {
-          type: 'text',
-          text: 'Calendar date memo updated successfully.',
-        },
-      ],
-    }
+    return jsonToolResponse({
+      targetDate: date,
+      memo: normalizedMemo,
+      updated: true,
+    })
   } catch (error) {
     console.error('Error updating calendar date memo:', error)
-    return {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Error updating calendar date memo: ${error}`,
-        },
-      ],
-    }
+    return errorToolResponse('Error updating calendar date memo')
   }
 }

@@ -1,7 +1,7 @@
 import { createServer } from 'node:http'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { parseBearerToken } from './bearerToken.js'
-import { createMcpServer, type UpstreamTokenResolver } from './mcpServer.js'
+import { type UpstreamTokenResolver, createMcpServer } from './mcpServer.js'
 
 export type RemoteAuthMode = 'passthrough' | 'env'
 
@@ -19,7 +19,9 @@ type Session = {
   upstreamToken?: string
 }
 
-export async function startRemoteServer(options: StartRemoteServerOptions): Promise<void> {
+export async function startRemoteServer(
+  options: StartRemoteServerOptions,
+): Promise<void> {
   const ssePath = options.ssePath ?? '/sse'
   const messagePath = options.messagePath ?? '/message'
   const sessions = new Map<string, Session>()
@@ -33,10 +35,16 @@ export async function startRemoteServer(options: StartRemoteServerOptions): Prom
 
   const server = createServer(async (req, res) => {
     try {
-      const requestUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
+      const requestUrl = new URL(
+        req.url ?? '/',
+        `http://${req.headers.host ?? 'localhost'}`,
+      )
 
       if (req.method === 'GET' && requestUrl.pathname === ssePath) {
-        const upstreamToken = getUpstreamTokenForSse(req.headers.authorization, options.authMode)
+        const upstreamToken = getUpstreamTokenForSse(
+          req.headers.authorization,
+          options.authMode,
+        )
         if (options.authMode === 'passthrough' && !upstreamToken) {
           res.writeHead(401).end('Unauthorized')
           return
@@ -45,17 +53,21 @@ export async function startRemoteServer(options: StartRemoteServerOptions): Prom
         const transport = new SSEServerTransport(messagePath, res)
         sessions.set(transport.sessionId, { transport, upstreamToken })
 
-        const mcpServer = createMcpServer({ resolveUpstreamToken })
+        const mcpServer = createMcpServer({
+          resolveUpstreamToken,
+          requireUpstreamToken: options.authMode === 'passthrough',
+        })
         let closed = false
 
         const keepAliveMs = options.sseKeepAliveMs
-        const keepAliveTimer = keepAliveMs && keepAliveMs > 0
-          ? setInterval(() => {
-            if (!res.writableEnded) {
-              res.write(':\n\n')
-            }
-          }, keepAliveMs)
-          : undefined
+        const keepAliveTimer =
+          keepAliveMs && keepAliveMs > 0
+            ? setInterval(() => {
+                if (!res.writableEnded) {
+                  res.write(':\n\n')
+                }
+              }, keepAliveMs)
+            : undefined
 
         transport.onclose = () => {
           if (closed) {
@@ -117,7 +129,9 @@ export async function startRemoteServer(options: StartRemoteServerOptions): Prom
     server.listen(options.port, options.host, () => resolve())
   })
 
-  console.log(`Remote MCP server listening on http://${options.host}:${options.port}${ssePath}`)
+  console.log(
+    `Remote MCP server listening on http://${options.host}:${options.port}${ssePath}`,
+  )
 }
 
 function getUpstreamTokenForSse(

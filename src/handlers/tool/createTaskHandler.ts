@@ -1,14 +1,13 @@
-import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { z } from 'zod'
 import { httpClient } from '../../client.js'
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
 export type CreateTaskHandlerArgs = {
-  taskName: z.ZodString
-  categoryUUID: z.ZodOptional<z.ZodString>
-  scheduledStartDate: z.ZodOptional<z.ZodString>
-  scheduledEndDate: z.ZodOptional<z.ZodString>
-  url: z.ZodOptional<z.ZodString>
-  detail: z.ZodOptional<z.ZodString>
+  taskName: string
+  categoryUUID?: string
+  scheduledStartDate?: string
+  scheduledEndDate?: string
+  url?: string
+  detail?: string
 }
 
 type CreateTaskRequest = {
@@ -20,14 +19,14 @@ type CreateTaskRequest = {
   detail?: string
 }
 
-export const createTaskHandler: ToolCallback<CreateTaskHandlerArgs> = async ({
+export const createTaskHandler = async ({
   taskName,
   categoryUUID,
   scheduledStartDate,
   scheduledEndDate,
   url,
   detail,
-}) => {
+}: CreateTaskHandlerArgs) => {
   try {
     await httpClient.postJson<null, CreateTaskRequest>({
       path: '/v2/integration/todo',
@@ -40,23 +39,12 @@ export const createTaskHandler: ToolCallback<CreateTaskHandlerArgs> = async ({
         detail: detail,
       },
     })
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Task "${taskName}" created successfully.`,
-        },
-      ],
-    }
+    return jsonToolResponse({
+      taskName,
+      created: true,
+    })
   } catch (error) {
     console.error('Error creating task:', error)
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error creating task: ${error}`,
-        },
-      ],
-    }
+    return errorToolResponse('Error creating task')
   }
 }
