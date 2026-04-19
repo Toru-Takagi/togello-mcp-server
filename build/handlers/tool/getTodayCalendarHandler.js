@@ -10,7 +10,7 @@ export const getTodayCalendarHandler = async () => {
         });
         const filteredTasks = tasks.filter((task) => task.scheduledStartDate != null);
         return jsonToolResponse({
-            events: googleEvents.items.map((event) => ({
+            events: (googleEvents.items ?? []).map((event) => ({
                 title: event.summary,
                 startDateTime: formatEventTime(event.start),
                 endDateTime: formatEventTime(event.end),
@@ -24,7 +24,7 @@ export const getTodayCalendarHandler = async () => {
     }
     catch (error) {
         console.error('Error in tool handler:', error);
-        return errorToolResponse(`Error in tool handler: ${error}`);
+        return errorToolResponse('Error retrieving calendar events');
     }
 };
 const formatEventTime = (dateTime) => {

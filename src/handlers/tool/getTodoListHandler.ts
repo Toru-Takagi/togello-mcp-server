@@ -35,7 +35,7 @@ export const getTodoListHandler = async ({
     })
   } catch (error) {
     console.error('Error in tool handler:', error)
-    return errorToolResponse(`Error in tool handler: ${error}`)
+    return errorToolResponse('Error retrieving tasks')
   }
 }
 

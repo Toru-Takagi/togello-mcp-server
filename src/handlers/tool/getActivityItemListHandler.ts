@@ -21,7 +21,7 @@ export const getActivityItemListHandler = async () => {
     })
   } catch (error) {
     console.error('Error in tool handler:', error)
-    return errorToolResponse(`Error in tool handler: ${error}`)
+    return errorToolResponse('Error retrieving activity items')
   }
 }
 

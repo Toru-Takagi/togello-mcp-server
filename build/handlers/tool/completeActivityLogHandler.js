@@ -13,6 +13,6 @@ export const completeActivityLogHandler = async ({ activityLogUUID, }) => {
     }
     catch (error) {
         console.error('Error completing activity log:', error);
-        return errorToolResponse(`Error completing activity log: ${error}`);
+        return errorToolResponse('Error completing activity log');
     }
 };

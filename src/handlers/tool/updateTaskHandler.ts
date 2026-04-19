@@ -28,7 +28,7 @@ export const updateTaskHandler = async ({
 }: UpdateTaskHandlerArgs) => {
   try {
     await httpClient.putJson<null, UpdateTaskRequest>({
-      path: `/v2/integration/todo/${todoUUID}`,
+      path: `/v2/integration/todo/${encodeURIComponent(todoUUID)}`,
       body: {
         isCompleted,
         scheduledStartDate,
@@ -44,6 +44,6 @@ export const updateTaskHandler = async ({
     })
   } catch (error) {
     console.error('Error updating task:', error)
-    return errorToolResponse(`Error updating task: ${error}`)
+    return errorToolResponse('Error updating task')
   }
 }

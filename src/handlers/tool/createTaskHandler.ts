@@ -45,6 +45,6 @@ export const createTaskHandler = async ({
     })
   } catch (error) {
     console.error('Error creating task:', error)
-    return errorToolResponse(`Error creating task: ${error}`)
+    return errorToolResponse('Error creating task')
   }
 }

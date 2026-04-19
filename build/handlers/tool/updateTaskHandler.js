@@ -3,7 +3,7 @@ import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
 export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartDate, scheduledEndDate, url, detail, }) => {
     try {
         await httpClient.putJson({
-            path: `/v2/integration/todo/${todoUUID}`,
+            path: `/v2/integration/todo/${encodeURIComponent(todoUUID)}`,
             body: {
                 isCompleted,
                 scheduledStartDate,
@@ -20,6 +20,6 @@ export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartD
     }
     catch (error) {
         console.error('Error updating task:', error);
-        return errorToolResponse(`Error updating task: ${error}`);
+        return errorToolResponse('Error updating task');
     }
 };

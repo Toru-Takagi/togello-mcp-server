@@ -83,6 +83,7 @@ export function createMcpServer(options = {}) {
         inputSchema: {
             todoUUID: z
                 .string()
+                .uuid()
                 .describe('Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it.'),
             isCompleted: z
                 .boolean()

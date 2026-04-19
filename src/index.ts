@@ -115,5 +115,10 @@ function validateRemoteAuthMode({
 }
 
 function isLocalHost(host: string): boolean {
-  return host === 'localhost' || host === '127.0.0.1' || host === '::1'
+  const normalizedHost = host.trim().toLowerCase()
+  return (
+    normalizedHost === 'localhost' ||
+    normalizedHost === '127.0.0.1' ||
+    normalizedHost === '::1'
+  )
 }

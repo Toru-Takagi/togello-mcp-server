@@ -15,6 +15,6 @@ export const startActivityLogHandler = async ({ activityItemName, }) => {
     }
     catch (error) {
         console.error('Error starting activity log:', error);
-        return errorToolResponse(`Error starting activity log: ${error}`);
+        return errorToolResponse('Error starting activity log');
     }
 };

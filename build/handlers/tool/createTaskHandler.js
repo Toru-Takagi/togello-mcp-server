@@ -20,6 +20,6 @@ export const createTaskHandler = async ({ taskName, categoryUUID, scheduledStart
     }
     catch (error) {
         console.error('Error creating task:', error);
-        return errorToolResponse(`Error creating task: ${error}`);
+        return errorToolResponse('Error creating task');
     }
 };

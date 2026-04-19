@@ -9,6 +9,7 @@ export const getJapanCurrentTimeHandler = async () => {
         });
     }
     catch (error) {
-        return errorToolResponse(`日本時刻取得中にエラーが発生しました: ${error}`);
+        console.error('Error getting Japan current time:', error);
+        return errorToolResponse('Error getting Japan current time');
     }
 };

@@ -12,6 +12,6 @@ export const getCalendarDateMemoHandler = async ({ date, }) => {
     }
     catch (error) {
         console.error('Error getting calendar date memo:', error);
-        return errorToolResponse(`Error getting calendar date memo: ${error}`);
+        return errorToolResponse('Error getting calendar date memo');
     }
 };

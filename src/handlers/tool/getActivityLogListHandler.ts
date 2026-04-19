@@ -16,14 +16,10 @@ export const getActivityLogListHandler = async () => {
         endDateTime: log.endDateTime,
         itemName: log.itemName,
       })),
-      guidance:
-        'If all activity logs have endDateTime values, the user is not doing anything now. If one log has a null endDateTime, that log represents the current activity.',
     })
   } catch (error) {
     console.error('Error in activity log list handler:', error)
-    return errorToolResponse(
-      `アクティビティログの取得中にエラーが発生しました: ${error}`,
-    )
+    return errorToolResponse('Error retrieving activity logs')
   }
 }
 

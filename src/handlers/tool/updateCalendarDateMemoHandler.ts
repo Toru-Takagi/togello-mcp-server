@@ -30,6 +30,6 @@ export const updateCalendarDateMemoHandler = async ({
     })
   } catch (error) {
     console.error('Error updating calendar date memo:', error)
-    return errorToolResponse(`Error updating calendar date memo: ${error}`)
+    return errorToolResponse('Error updating calendar date memo')
   }
 }

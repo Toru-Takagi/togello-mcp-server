@@ -80,5 +80,8 @@ function validateRemoteAuthMode({ host, authMode, }) {
     throw new Error('TOGELLO_MCP_AUTH_MODE=env shares one TOGELLO_API_TOKEN with every remote client. Use passthrough auth for public remote MCP, or set TOGELLO_MCP_ALLOW_ENV_AUTH=true explicitly for a trusted deployment.');
 }
 function isLocalHost(host) {
-    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    const normalizedHost = host.trim().toLowerCase();
+    return (normalizedHost === 'localhost' ||
+        normalizedHost === '127.0.0.1' ||
+        normalizedHost === '::1');
 }
