@@ -155,6 +155,7 @@ export function createMcpServer(options = {}) {
         inputSchema: {
             activityLogUUID: z
                 .string()
+                .uuid()
                 .describe('You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.'),
         },
     }, withUpstreamToken(completeActivityLogHandler, options.resolveUpstreamToken, options.requireUpstreamToken));

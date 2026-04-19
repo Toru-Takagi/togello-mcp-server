@@ -296,6 +296,7 @@ export function createMcpServer(
       inputSchema: {
         activityLogUUID: z
           .string()
+          .uuid()
           .describe(
             'You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.',
           ),

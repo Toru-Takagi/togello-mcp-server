@@ -3,7 +3,7 @@ import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
 export const completeActivityLogHandler = async ({ activityLogUUID, }) => {
     try {
         await httpClient.putJson({
-            path: `/v2/integration/activity-logs/${activityLogUUID}/work-complete`,
+            path: `/v2/integration/activity-logs/${encodeURIComponent(activityLogUUID)}/work-complete`,
             body: {},
         });
         return jsonToolResponse({
