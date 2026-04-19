@@ -1,4 +1,5 @@
 import { httpClient } from '../../client.js';
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
 export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartDate, scheduledEndDate, url, detail, }) => {
     try {
         await httpClient.putJson({
@@ -11,24 +12,14 @@ export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartD
                 detail,
             },
         });
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Task status updated successfully. Task is now ${isCompleted ? 'completed' : 'incomplete'}.`,
-                },
-            ],
-        };
+        return jsonToolResponse({
+            todoUUID,
+            isCompleted,
+            updated: true,
+        });
     }
     catch (error) {
         console.error('Error updating task:', error);
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Error updating task: ${error}`,
-                },
-            ],
-        };
+        return errorToolResponse(`Error updating task: ${error}`);
     }
 };

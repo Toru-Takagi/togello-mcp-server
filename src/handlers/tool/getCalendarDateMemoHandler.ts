@@ -1,38 +1,26 @@
-import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { z } from 'zod'
 import { httpClient } from '../../client.js'
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
 export type GetCalendarDateMemoHandlerArgs = {
-  date: z.ZodString
+  date: string
 }
 
-export const getCalendarDateMemoHandler: ToolCallback<
-  GetCalendarDateMemoHandlerArgs
-> = async ({ date }) => {
+export const getCalendarDateMemoHandler = async ({
+  date,
+}: GetCalendarDateMemoHandlerArgs) => {
   try {
-    const calendarDateMemo = await httpClient.fetchURL<GetCalendarDateMemoResponse>({
-      path: `/v2/integration/calendar-date-memo/${encodeURIComponent(date)}`,
-    })
+    const calendarDateMemo =
+      await httpClient.fetchURL<GetCalendarDateMemoResponse>({
+        path: `/v2/integration/calendar-date-memo/${encodeURIComponent(date)}`,
+      })
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `targetDate: ${calendarDateMemo.targetDate}\nmemo: ${calendarDateMemo.memo ?? ''}`,
-        },
-      ],
-    }
+    return jsonToolResponse({
+      targetDate: calendarDateMemo.targetDate,
+      memo: calendarDateMemo.memo ?? '',
+    })
   } catch (error) {
     console.error('Error getting calendar date memo:', error)
-    return {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Error getting calendar date memo: ${error}`,
-        },
-      ],
-    }
+    return errorToolResponse(`Error getting calendar date memo: ${error}`)
   }
 }
 

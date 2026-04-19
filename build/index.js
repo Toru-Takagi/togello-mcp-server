@@ -5,17 +5,21 @@ import { startRemoteServer } from './remoteServer.js';
 async function main() {
     const args = process.argv.slice(2);
     const firstArg = args[0];
-    const mode = (getArgValue(args, '--mode')
-        ?? (!firstArg || firstArg.startsWith('--') ? undefined : firstArg)
-        ?? process.env.TOGELLO_MCP_MODE
-        ?? 'stdio').toLowerCase();
+    const mode = (getArgValue(args, '--mode') ??
+        (!firstArg || firstArg.startsWith('--') ? undefined : firstArg) ??
+        process.env.TOGELLO_MCP_MODE ??
+        'stdio').toLowerCase();
     if (mode === 'remote') {
         const host = getArgValue(args, '--host') ?? process.env.TOGELLO_MCP_HOST ?? '0.0.0.0';
         const portString = getArgValue(args, '--port') ?? process.env.TOGELLO_MCP_PORT ?? '8081';
         const authMode = parseRemoteAuthMode(getArgValue(args, '--auth-mode') ?? process.env.TOGELLO_MCP_AUTH_MODE);
         const keepAliveMsString = process.env.TOGELLO_MCP_SSE_KEEPALIVE_MS;
+        validateRemoteAuthMode({ host, authMode });
         const port = Number(portString);
-        if (!Number.isFinite(port) || !Number.isInteger(port) || port < 1 || port > 65535) {
+        if (!Number.isFinite(port) ||
+            !Number.isInteger(port) ||
+            port < 1 ||
+            port > 65535) {
             throw new Error(`Invalid port: ${portString}`);
         }
         let keepAliveMs;
@@ -59,4 +63,22 @@ function parseRemoteAuthMode(value) {
         return normalized;
     }
     throw new Error(`Invalid TOGELLO_MCP_AUTH_MODE: ${value}`);
+}
+function validateRemoteAuthMode({ host, authMode, }) {
+    if (authMode !== 'env') {
+        return;
+    }
+    if (!process.env.TOGELLO_API_TOKEN) {
+        throw new Error('TOGELLO_MCP_AUTH_MODE=env requires TOGELLO_API_TOKEN');
+    }
+    if (isLocalHost(host)) {
+        return;
+    }
+    if (process.env.TOGELLO_MCP_ALLOW_ENV_AUTH === 'true') {
+        return;
+    }
+    throw new Error('TOGELLO_MCP_AUTH_MODE=env shares one TOGELLO_API_TOKEN with every remote client. Use passthrough auth for public remote MCP, or set TOGELLO_MCP_ALLOW_ENV_AUTH=true explicitly for a trusted deployment.');
+}
+function isLocalHost(host) {
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }

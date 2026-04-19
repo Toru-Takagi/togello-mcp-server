@@ -1,9 +1,7 @@
-import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { httpClient } from '../../client.js'
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
-export const getActivityItemListHandler: ToolCallback<
-  Record<string, never>
-> = async () => {
+export const getActivityItemListHandler = async () => {
   try {
     const activityItemList = await httpClient.fetchURL<
       ActivityItemListResponse[]
@@ -15,31 +13,15 @@ export const getActivityItemListHandler: ToolCallback<
       (item) => item.enabled === 'true',
     )
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `The following is a single activity item represented in the order:
-[activity item uuid, item name]`,
-        },
-        {
-          type: 'text',
-          text: enabledActivityItemList
-            .map((item) => [item.activityItemUUID, item.itemName])
-            .join(','),
-        },
-      ],
-    }
+    return jsonToolResponse({
+      activityItems: enabledActivityItemList.map((item) => ({
+        activityItemUUID: item.activityItemUUID,
+        itemName: item.itemName,
+      })),
+    })
   } catch (error) {
     console.error('Error in tool handler:', error)
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error in tool handler: ${error}`,
-        },
-      ],
-    }
+    return errorToolResponse(`Error in tool handler: ${error}`)
   }
 }
 

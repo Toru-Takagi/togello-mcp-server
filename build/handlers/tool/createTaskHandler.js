@@ -1,4 +1,5 @@
 import { httpClient } from '../../client.js';
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
 export const createTaskHandler = async ({ taskName, categoryUUID, scheduledStartDate, scheduledEndDate, url, detail, }) => {
     try {
         await httpClient.postJson({
@@ -12,24 +13,13 @@ export const createTaskHandler = async ({ taskName, categoryUUID, scheduledStart
                 detail: detail,
             },
         });
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Task "${taskName}" created successfully.`,
-                },
-            ],
-        };
+        return jsonToolResponse({
+            taskName,
+            created: true,
+        });
     }
     catch (error) {
         console.error('Error creating task:', error);
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Error creating task: ${error}`,
-                },
-            ],
-        };
+        return errorToolResponse(`Error creating task: ${error}`);
     }
 };

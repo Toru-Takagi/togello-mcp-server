@@ -23,7 +23,10 @@ export async function startRemoteServer(options) {
                 }
                 const transport = new SSEServerTransport(messagePath, res);
                 sessions.set(transport.sessionId, { transport, upstreamToken });
-                const mcpServer = createMcpServer({ resolveUpstreamToken });
+                const mcpServer = createMcpServer({
+                    resolveUpstreamToken,
+                    requireUpstreamToken: options.authMode === 'passthrough',
+                });
                 let closed = false;
                 const keepAliveMs = options.sseKeepAliveMs;
                 const keepAliveTimer = keepAliveMs && keepAliveMs > 0

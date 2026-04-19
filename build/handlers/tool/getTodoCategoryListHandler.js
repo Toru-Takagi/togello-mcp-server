@@ -1,34 +1,19 @@
 import { httpClient } from '../../client.js';
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
 export const getTodoCategoryListHandler = async () => {
     try {
         const categoryList = await httpClient.fetchURL({
             path: '/v2/integration/categories',
         });
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `The following is a single category represented in the order:
-[category uuid, label of category]`,
-                },
-                {
-                    type: 'text',
-                    text: categoryList
-                        .map((category) => [category.categoryUUID, category.label])
-                        .join(','),
-                },
-            ],
-        };
+        return jsonToolResponse({
+            categories: categoryList.map((category) => ({
+                categoryUUID: category.categoryUUID,
+                label: category.label,
+            })),
+        });
     }
     catch (error) {
         console.error('Error in tool handler:', error);
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Error in tool handler: ${error}`,
-                },
-            ],
-        };
+        return errorToolResponse(`Error in tool handler: ${error}`);
     }
 };

@@ -1,6 +1,7 @@
 import { getUpstreamToken } from './upstreamTokenContext.js'
 
-const API_BASE_URL = process.env.TOGELLO_API_BASE_URL ?? 'https://togello.api.toru-takagi.dev'
+const API_BASE_URL =
+  process.env.TOGELLO_API_BASE_URL ?? 'https://togello.api.toru-takagi.dev'
 
 type FetchServerProps = {
   path: string
@@ -19,7 +20,9 @@ type HttpClient = {
 function getApiTokenOrThrow(): string {
   const token = getUpstreamToken() ?? process.env.TOGELLO_API_TOKEN
   if (!token) {
-    throw new Error('API token not available from upstream context or TOGELLO_API_TOKEN environment variable')
+    throw new Error(
+      'API token not available from upstream context or TOGELLO_API_TOKEN environment variable',
+    )
   }
   return token
 }

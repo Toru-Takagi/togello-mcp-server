@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import { runWithUpstreamToken } from './upstreamTokenContext.js'
 import { completeActivityLogHandler } from './handlers/tool/completeActivityLogHandler.js'
 import { createTaskHandler } from './handlers/tool/createTaskHandler.js'
 import { getActivityItemListHandler } from './handlers/tool/getActivityItemListHandler.js'
@@ -11,22 +11,47 @@ import { getTodayCalendarHandler } from './handlers/tool/getTodayCalendarHandler
 import { getTodoCategoryListHandler } from './handlers/tool/getTodoCategoryListHandler.js'
 import { getTodoListHandler } from './handlers/tool/getTodoListHandler.js'
 import { startActivityLogHandler } from './handlers/tool/startActivityLogHandler.js'
+import { errorToolResponse } from './handlers/tool/toolResponse.js'
 import { updateCalendarDateMemoHandler } from './handlers/tool/updateCalendarDateMemoHandler.js'
 import { updateTaskHandler } from './handlers/tool/updateTaskHandler.js'
+import { runWithUpstreamToken } from './upstreamTokenContext.js'
 
 export type UpstreamTokenResolver = (sessionId?: string) => string | undefined
 
 export type CreateMcpServerOptions = {
   resolveUpstreamToken?: UpstreamTokenResolver
+  requireUpstreamToken?: boolean
 }
+
+type ToolExtra = {
+  sessionId?: string
+}
+
+type ToolHandler<TArgs extends Record<string, unknown>> = (
+  args: TArgs,
+  extra: ToolExtra,
+) => CallToolResult | Promise<CallToolResult>
 
 const calendarDateMemoDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD')
 
-function withUpstreamToken(cb: any, resolveUpstreamToken?: UpstreamTokenResolver): any {
-  return async (args: any, extra: { sessionId?: string }) => {
+const readOnlyToolAnnotations = {
+  readOnlyHint: true,
+}
+
+function withUpstreamToken<TArgs extends Record<string, unknown>>(
+  cb: ToolHandler<TArgs>,
+  resolveUpstreamToken?: UpstreamTokenResolver,
+  requireUpstreamToken = false,
+): ToolHandler<TArgs> {
+  return async (args, extra) => {
     const token = resolveUpstreamToken?.(extra.sessionId)
+    if (!token && requireUpstreamToken) {
+      return errorToolResponse(
+        'Remote passthrough auth requires a Togello API token from the client Authorization header.',
+      )
+    }
     if (!token) {
       return await cb(args, extra)
     }
@@ -34,151 +59,265 @@ function withUpstreamToken(cb: any, resolveUpstreamToken?: UpstreamTokenResolver
   }
 }
 
-export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer {
-  const server = new McpServer({
-    name: 'togello',
-    version: '1.0.0',
-    capabilities: {
-      resources: {},
-      tools: {},
+export function createMcpServer(
+  options: CreateMcpServerOptions = {},
+): McpServer {
+  const server = new McpServer(
+    {
+      name: 'togello',
+      version: '1.0.0',
     },
-  })
+    {
+      capabilities: {
+        resources: {},
+        tools: {},
+      },
+    },
+  )
 
-  server.tool(
+  server.registerTool(
     'get-tasks-list',
-    'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / detail / scheduled start date and time / scheduled end date and time / priority / category',
     {
-      categoryUUIDs: z.array(z.string()).optional().describe('Filters tasks by specified category UUIDs.'),
+      description:
+        'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / detail / scheduled start date and time / scheduled end date and time / priority / category',
+      inputSchema: {
+        categoryUUIDs: z
+          .array(z.string())
+          .optional()
+          .describe('Filters tasks by specified category UUIDs.'),
+      },
+      annotations: readOnlyToolAnnotations,
     },
-    withUpstreamToken(getTodoListHandler, options.resolveUpstreamToken),
+    withUpstreamToken(
+      getTodoListHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'create-task',
-    'Creates a new task in the TODO feature.',
     {
-      taskName: z.string().describe('create task name'),
-      categoryUUID: z
-        .string()
-        .optional()
-        .describe('category UUID. category UUID of get-todo-category-list'),
-      scheduledStartDate: z.string().optional().describe('Scheduled start date in ISO format.'),
-      scheduledEndDate: z.string().optional().describe('Scheduled end date in ISO format.'),
-      url: z.string().optional().describe('Optional URL associated with the task.'),
-      detail: z.string().optional().describe('Optional detail associated with the task.'),
+      description: 'Creates a new task in the TODO feature.',
+      inputSchema: {
+        taskName: z.string().describe('create task name'),
+        categoryUUID: z
+          .string()
+          .optional()
+          .describe('category UUID. category UUID of get-todo-category-list'),
+        scheduledStartDate: z
+          .string()
+          .optional()
+          .describe('Scheduled start date in ISO format.'),
+        scheduledEndDate: z
+          .string()
+          .optional()
+          .describe('Scheduled end date in ISO format.'),
+        url: z
+          .string()
+          .optional()
+          .describe('Optional URL associated with the task.'),
+        detail: z
+          .string()
+          .optional()
+          .describe('Optional detail associated with the task.'),
+      },
     },
-    withUpstreamToken(createTaskHandler, options.resolveUpstreamToken),
+    withUpstreamToken(
+      createTaskHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'update-task',
-    'Updates a task in the TODO feature.',
     {
-      todoUUID: z
-        .string()
-        .describe(
-          'Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it.',
-        ),
-      isCompleted: z
-        .boolean()
-        .describe('Required. Updates the completion status of the task. If true, it is completed.'),
-      scheduledStartDate: z
-        .string()
-        .optional()
-        .describe(
-          'Scheduled start date in ISO format. If the user does not specify, the information obtained from get-tasks-list is passed.',
-        ),
-      scheduledEndDate: z
-        .string()
-        .optional()
-        .describe(
-          'Scheduled end date in ISO format. If the user does not specify, the information obtained from get-tasks-list is passed.',
-        ),
-      url: z
-        .string()
-        .optional()
-        .describe(
-          'Optional URL associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.',
-        ),
-      detail: z
-        .string()
-        .optional()
-        .describe(
-          'Optional detail associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.',
-        ),
+      description: 'Updates a task in the TODO feature.',
+      inputSchema: {
+        todoUUID: z
+          .string()
+          .describe(
+            'Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it.',
+          ),
+        isCompleted: z
+          .boolean()
+          .describe(
+            'Required. Updates the completion status of the task. If true, it is completed.',
+          ),
+        scheduledStartDate: z
+          .string()
+          .optional()
+          .describe(
+            'Scheduled start date in ISO format. If the user does not specify, the information obtained from get-tasks-list is passed.',
+          ),
+        scheduledEndDate: z
+          .string()
+          .optional()
+          .describe(
+            'Scheduled end date in ISO format. If the user does not specify, the information obtained from get-tasks-list is passed.',
+          ),
+        url: z
+          .string()
+          .optional()
+          .describe(
+            'Optional URL associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.',
+          ),
+        detail: z
+          .string()
+          .optional()
+          .describe(
+            'Optional detail associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.',
+          ),
+      },
     },
-    withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken),
+    withUpstreamToken(
+      updateTaskHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'get-calendar-date-memo',
-    'Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.',
     {
-      date: calendarDateMemoDateSchema.describe('Target date in YYYY-MM-DD format.'),
+      description:
+        'Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.',
+      inputSchema: {
+        date: calendarDateMemoDateSchema.describe(
+          'Target date in YYYY-MM-DD format.',
+        ),
+      },
+      annotations: readOnlyToolAnnotations,
     },
-    withUpstreamToken(getCalendarDateMemoHandler, options.resolveUpstreamToken),
+    withUpstreamToken(
+      getCalendarDateMemoHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'update-calendar-date-memo',
-    'Updates a calendar date memo for the specified date.',
     {
-      date: calendarDateMemoDateSchema.describe('Target date in YYYY-MM-DD format.'),
-      memo: z
-        .string()
-        .describe('Memo content for the date. Pass an empty or whitespace-only string to clear the memo.'),
+      description: 'Updates a calendar date memo for the specified date.',
+      inputSchema: {
+        date: calendarDateMemoDateSchema.describe(
+          'Target date in YYYY-MM-DD format.',
+        ),
+        memo: z
+          .string()
+          .describe(
+            'Memo content for the date. Pass an empty or whitespace-only string to clear the memo.',
+          ),
+      },
     },
-    withUpstreamToken(updateCalendarDateMemoHandler, options.resolveUpstreamToken),
+    withUpstreamToken(
+      updateCalendarDateMemoHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'get-todo-category-list',
-    'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID',
-    {},
-    withUpstreamToken(getTodoCategoryListHandler, options.resolveUpstreamToken),
+    {
+      description:
+        'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID',
+      inputSchema: {},
+      annotations: readOnlyToolAnnotations,
+    },
+    withUpstreamToken(
+      getTodoCategoryListHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'get-today-calendar',
-    'Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ',
-    {},
-    withUpstreamToken(getTodayCalendarHandler, options.resolveUpstreamToken),
+    {
+      description:
+        'Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ',
+      inputSchema: {},
+      annotations: readOnlyToolAnnotations,
+    },
+    withUpstreamToken(
+      getTodayCalendarHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'get-activity-item-list',
-    'Retrieves the list of activity items from the integration feature. Recognizes activity item UUID / item name',
-    {},
-    withUpstreamToken(getActivityItemListHandler, options.resolveUpstreamToken),
+    {
+      description:
+        'Retrieves the list of activity items from the integration feature. Recognizes activity item UUID / item name',
+      inputSchema: {},
+      annotations: readOnlyToolAnnotations,
+    },
+    withUpstreamToken(
+      getActivityItemListHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'get-activity-log-list',
-    'Retrieves the list of activity logs from the integration feature. Since it is a record of what the person has done, if all the end dates are filled in, this person is not doing anything now. If there is one with a null end date, there should be at most one, and if there is one, it means that the person is doing it now. Recognizes activity log UUID / start date and time / end date and time / item name.',
-    {},
-    withUpstreamToken(getActivityLogListHandler, options.resolveUpstreamToken),
+    {
+      description:
+        'Retrieves the list of activity logs from the integration feature. Since it is a record of what the person has done, if all the end dates are filled in, this person is not doing anything now. If there is one with a null end date, there should be at most one, and if there is one, it means that the person is doing it now. Recognizes activity log UUID / start date and time / end date and time / item name.',
+      inputSchema: {},
+      annotations: readOnlyToolAnnotations,
+    },
+    withUpstreamToken(
+      getActivityLogListHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'start-activity-log',
-    'Starts an activity log.',
     {
-      activityItemName: z
-        .string()
-        .describe(
-          'You must specify a valid itemName obtained from get-activity-item-list. This tool requires a pre-existing activity item.',
-        ),
+      description: 'Starts an activity log.',
+      inputSchema: {
+        activityItemName: z
+          .string()
+          .describe(
+            'You must specify a valid itemName obtained from get-activity-item-list. This tool requires a pre-existing activity item.',
+          ),
+      },
     },
-    withUpstreamToken(startActivityLogHandler, options.resolveUpstreamToken),
+    withUpstreamToken(
+      startActivityLogHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'complete-activity-log',
-    'Completes an activity log.',
     {
-      activityLogUUID: z
-        .string()
-        .describe(
-          'You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.',
-        ),
+      description: 'Completes an activity log.',
+      inputSchema: {
+        activityLogUUID: z
+          .string()
+          .describe(
+            'You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.',
+          ),
+      },
     },
-    withUpstreamToken(completeActivityLogHandler, options.resolveUpstreamToken),
+    withUpstreamToken(
+      completeActivityLogHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
-  server.tool(
+  server.registerTool(
     'get-japan-current-time',
-    'Returns the current time in Japan (JST).',
-    {},
-    withUpstreamToken(getJapanCurrentTimeHandler, options.resolveUpstreamToken),
+    {
+      description: 'Returns the current time in Japan (JST).',
+      inputSchema: {},
+      annotations: readOnlyToolAnnotations,
+    },
+    withUpstreamToken(
+      getJapanCurrentTimeHandler,
+      options.resolveUpstreamToken,
+      options.requireUpstreamToken,
+    ),
   )
 
   return server

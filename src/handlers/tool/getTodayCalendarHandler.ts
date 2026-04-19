@@ -1,9 +1,7 @@
-import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { httpClient } from '../../client.js'
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
-export const getTodayCalendarHandler: ToolCallback<
-  Record<string, never>
-> = async () => {
+export const getTodayCalendarHandler = async () => {
   try {
     const googleEvents = await httpClient.fetchURL<GoogleCalendarResponse>({
       path: '/v2/integration/google-calendar/event',
@@ -15,49 +13,21 @@ export const getTodayCalendarHandler: ToolCallback<
       (task) => task.scheduledStartDate != null,
     )
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `The following is a single event represented in the order:
-[title of event, start date of event, end date of event]`,
-        },
-        {
-          type: 'text',
-          text: googleEvents.items
-            .map((event) => [
-              event.summary,
-              formatEventTime(event.start),
-              formatEventTime(event.end),
-            ])
-            .join(','),
-        },
-        {
-          type: 'text',
-          text: 'en: The following is a task. The following is the order:[task name, scheduled start date, scheduled end date]',
-        },
-        {
-          type: 'text',
-          text: filteredTasks
-            .map((task) => [
-              task.label,
-              task.scheduledStartDate,
-              task.scheduledEndDate,
-            ])
-            .join(','),
-        },
-      ],
-    }
+    return jsonToolResponse({
+      events: googleEvents.items.map((event) => ({
+        title: event.summary,
+        startDateTime: formatEventTime(event.start),
+        endDateTime: formatEventTime(event.end),
+      })),
+      tasks: filteredTasks.map((task) => ({
+        taskName: task.label,
+        scheduledStartDate: task.scheduledStartDate,
+        scheduledEndDate: task.scheduledEndDate,
+      })),
+    })
   } catch (error) {
     console.error('Error in tool handler:', error)
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error in tool handler: ${error}`,
-        },
-      ],
-    }
+    return errorToolResponse(`Error in tool handler: ${error}`)
   }
 }
 
@@ -66,11 +36,8 @@ type GoogleCalendarResponse = {
 }
 
 type EventDateTime = {
-  // 全日のイベント用のフォーマット "yyyy-mm-dd"
   date?: string
-  // RFC3339形式の日時
   dateTime?: string
-  // IANAタイムゾーン名（例："Asia/Tokyo"）
   timeZone?: string
 }
 
@@ -80,17 +47,12 @@ type GoogleCalendarResponseItem = {
   end: EventDateTime
 }
 
-/**
- * EventDateTime型から表示用の日時文字列を取得する
- */
 const formatEventTime = (dateTime: EventDateTime): string => {
-  // 全日イベントの場合はdate、そうでない場合はdateTimeを使用
   if (dateTime.date) {
-    return dateTime.date // yyyy-mm-dd形式
+    return dateTime.date
   }
 
   if (dateTime.dateTime) {
-    // RFC3339形式の日時をより読みやすい形式に変換
     const dt = new Date(dateTime.dateTime)
     return dt.toLocaleString('ja-JP', {
       year: 'numeric',

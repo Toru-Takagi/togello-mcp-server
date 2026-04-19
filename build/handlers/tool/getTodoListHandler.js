@@ -1,5 +1,6 @@
 import { httpClient } from '../../client.js';
-export const getTodoListHandler = async ({ categoryUUIDs }) => {
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
+export const getTodoListHandler = async ({ categoryUUIDs, }) => {
     try {
         const categoryUUIDArray = categoryUUIDs ?? [];
         const qs = categoryUUIDArray.length > 0
@@ -8,44 +9,23 @@ export const getTodoListHandler = async ({ categoryUUIDs }) => {
         const tasks = await httpClient.fetchURL({
             path: `/v2/integration/todo${qs}`,
         });
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `The following is a single task represented in the order:
-[todo uuid, label of the task, detail of the task, scheduled start date, scheduled end date, priority, category of the task, URL associated with the task]`,
-                },
-                {
-                    type: 'text',
-                    text: 'The tasks with scheduled start dates that are today or in the past, and those with a priority of 2, should be addressed as soon as possible.',
-                },
-                {
-                    type: 'text',
-                    text: tasks
-                        .map((todo) => [
-                        todo.todoUUID,
-                        todo.label,
-                        todo.detail,
-                        todo.scheduledStartDate,
-                        todo.scheduledEndDate,
-                        todo.priorityNumber,
-                        todo.categoryLabel,
-                        todo.url,
-                    ])
-                        .join(','),
-                },
-            ],
-        };
+        return jsonToolResponse({
+            tasks: tasks.map((todo) => ({
+                todoUUID: todo.todoUUID,
+                label: todo.label,
+                detail: todo.detail,
+                scheduledStartDate: todo.scheduledStartDate,
+                scheduledEndDate: todo.scheduledEndDate,
+                priorityNumber: todo.priorityNumber,
+                categoryUUID: todo.categoryUUID,
+                categoryLabel: todo.categoryLabel,
+                url: todo.url,
+            })),
+            guidance: 'The tasks with scheduled start dates that are today or in the past, and those with a priority of 2, should be addressed as soon as possible.',
+        });
     }
     catch (error) {
         console.error('Error in tool handler:', error);
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Error in tool handler: ${error}`,
-                },
-            ],
-        };
+        return errorToolResponse(`Error in tool handler: ${error}`);
     }
 };

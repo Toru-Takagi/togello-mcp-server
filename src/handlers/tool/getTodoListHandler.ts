@@ -1,61 +1,41 @@
-import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { z } from 'zod'
 import { httpClient } from '../../client.js'
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
 export type GetTodoListHandlerArgs = {
-  categoryUUIDs: z.ZodOptional<z.ZodArray<z.ZodString>>
+  categoryUUIDs?: string[]
 }
 
-export const getTodoListHandler: ToolCallback<
-  GetTodoListHandlerArgs
-> = async ({ categoryUUIDs }) => {
+export const getTodoListHandler = async ({
+  categoryUUIDs,
+}: GetTodoListHandlerArgs) => {
   try {
-    const categoryUUIDArray = (categoryUUIDs as unknown as string[] | undefined) ?? []
-    const qs = categoryUUIDArray.length > 0
-      ? `?${categoryUUIDArray.map((u: string) => `categoryUUID=${encodeURIComponent(u)}`).join('&')}`
-      : ''
+    const categoryUUIDArray = categoryUUIDs ?? []
+    const qs =
+      categoryUUIDArray.length > 0
+        ? `?${categoryUUIDArray.map((u: string) => `categoryUUID=${encodeURIComponent(u)}`).join('&')}`
+        : ''
     const tasks = await httpClient.fetchURL<TodoListResponse>({
       path: `/v2/integration/todo${qs}`,
     })
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `The following is a single task represented in the order:
-[todo uuid, label of the task, detail of the task, scheduled start date, scheduled end date, priority, category of the task, URL associated with the task]`,
-        },
-        {
-          type: 'text',
-          text: 'The tasks with scheduled start dates that are today or in the past, and those with a priority of 2, should be addressed as soon as possible.',
-        },
-        {
-          type: 'text',
-          text: tasks
-            .map((todo) => [
-              todo.todoUUID,
-              todo.label,
-              todo.detail,
-              todo.scheduledStartDate,
-              todo.scheduledEndDate,
-              todo.priorityNumber,
-              todo.categoryLabel,
-              todo.url,
-            ])
-            .join(','),
-        },
-      ],
-    }
+    return jsonToolResponse({
+      tasks: tasks.map((todo) => ({
+        todoUUID: todo.todoUUID,
+        label: todo.label,
+        detail: todo.detail,
+        scheduledStartDate: todo.scheduledStartDate,
+        scheduledEndDate: todo.scheduledEndDate,
+        priorityNumber: todo.priorityNumber,
+        categoryUUID: todo.categoryUUID,
+        categoryLabel: todo.categoryLabel,
+        url: todo.url,
+      })),
+      guidance:
+        'The tasks with scheduled start dates that are today or in the past, and those with a priority of 2, should be addressed as soon as possible.',
+    })
   } catch (error) {
     console.error('Error in tool handler:', error)
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error in tool handler: ${error}`,
-        },
-      ],
-    }
+    return errorToolResponse(`Error in tool handler: ${error}`)
   }
 }
 
