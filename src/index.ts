@@ -47,10 +47,7 @@ async function main() {
     }
 
     const publicBaseUrl = getRemotePublicBaseUrl(port)
-    const oauthIssuer =
-      getEnvValue('TOGELLO_OAUTH_ISSUER') ??
-      getEnvValue('TOGELLO_API_BASE_URL') ??
-      'http://localhost:8000'
+    const oauthIssuer = getRemoteOAuthIssuer()
 
     await startRemoteServer({
       host,
@@ -92,12 +89,37 @@ function getEnvValue(name: string): string | undefined {
 function getRemotePublicBaseUrl(port: number): string {
   const publicBaseUrl = getEnvValue('TOGELLO_MCP_PUBLIC_BASE_URL')
   if (publicBaseUrl) {
-    return publicBaseUrl
+    return assertAbsoluteHttpUrl('TOGELLO_MCP_PUBLIC_BASE_URL', publicBaseUrl)
   }
   if (getEnvValue('ENV') === 'production') {
     throw new Error('TOGELLO_MCP_PUBLIC_BASE_URL is required in production')
   }
   return `http://localhost:${port}`
+}
+
+function getRemoteOAuthIssuer(): string {
+  const oauthIssuer =
+    getEnvValue('TOGELLO_OAUTH_ISSUER') ?? getEnvValue('TOGELLO_API_BASE_URL')
+  if (oauthIssuer) {
+    return assertAbsoluteHttpUrl('TOGELLO_OAUTH_ISSUER', oauthIssuer)
+  }
+  if (getEnvValue('ENV') === 'production') {
+    throw new Error('TOGELLO_OAUTH_ISSUER or TOGELLO_API_BASE_URL is required in production')
+  }
+  return 'http://localhost:8000'
+}
+
+function assertAbsoluteHttpUrl(name: string, value: string): string {
+  let parsed: URL
+  try {
+    parsed = new URL(value)
+  } catch {
+    throw new Error(`Invalid ${name}: ${value}`)
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`Invalid ${name}: ${value}`)
+  }
+  return value
 }
 
 function parseRemoteAuthMode(value: string | undefined): RemoteAuthMode {

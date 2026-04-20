@@ -14,9 +14,9 @@ const supportedScopes = [
 export async function startRemoteServer(options) {
     const ssePath = options.ssePath ?? '/sse';
     const messagePath = options.messagePath ?? '/message';
-    const publicBaseUrl = options.publicBaseUrl;
+    const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl);
     const oauthIssuer = options.oauthIssuer;
-    const protectedResourceMetadataUrl = `${trimTrailingSlash(publicBaseUrl)}${protectedResourceMetadataPath}`;
+    const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`;
     const sessions = new Map();
     const resolveUpstreamToken = (sessionId) => {
         if (!sessionId) {
@@ -27,15 +27,20 @@ export async function startRemoteServer(options) {
     const server = createServer(async (req, res) => {
         try {
             const requestUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-            if (req.method === 'GET' &&
-                requestUrl.pathname === protectedResourceMetadataPath) {
-                writeJsonResponse(res, {
-                    resource: publicBaseUrl,
-                    authorization_servers: [oauthIssuer],
-                    scopes_supported: supportedScopes,
-                    bearer_methods_supported: ['header'],
-                });
-                return;
+            if (requestUrl.pathname === protectedResourceMetadataPath) {
+                if (req.method === 'OPTIONS') {
+                    writeOptionsResponse(res);
+                    return;
+                }
+                if (req.method === 'GET') {
+                    writeJsonResponse(res, {
+                        resource: publicBaseUrl,
+                        authorization_servers: [oauthIssuer],
+                        scopes_supported: supportedScopes,
+                        bearer_methods_supported: ['header'],
+                    });
+                    return;
+                }
             }
             if (req.method === 'GET' && requestUrl.pathname === ssePath) {
                 const upstreamToken = getUpstreamTokenForSse(req.headers.authorization, options.authMode);
@@ -124,10 +129,21 @@ function trimTrailingSlash(url) {
 }
 function writeJsonResponse(res, body) {
     res.writeHead(200, {
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-store',
         'Content-Type': 'application/json',
     });
     res.end(JSON.stringify(body));
+}
+function writeOptionsResponse(res) {
+    res.writeHead(204, {
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+    });
+    res.end();
 }
 function getUpstreamTokenForSse(authorizationHeader, authMode) {
     if (authMode === 'env') {
