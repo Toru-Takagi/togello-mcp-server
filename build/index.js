@@ -73,9 +73,13 @@ function getRemotePublicBaseUrl(port) {
     return `http://localhost:${port}`;
 }
 function getRemoteOAuthIssuer() {
-    const oauthIssuer = getEnvValue('TOGELLO_OAUTH_ISSUER') ?? getEnvValue('TOGELLO_API_BASE_URL');
+    const oauthIssuer = getEnvValue('TOGELLO_OAUTH_ISSUER');
     if (oauthIssuer) {
         return assertAbsoluteHttpUrl('TOGELLO_OAUTH_ISSUER', oauthIssuer);
+    }
+    const apiBaseUrl = getEnvValue('TOGELLO_API_BASE_URL');
+    if (apiBaseUrl) {
+        return assertAbsoluteHttpUrl('TOGELLO_API_BASE_URL', apiBaseUrl);
     }
     if (getEnvValue('ENV') === 'production') {
         throw new Error('TOGELLO_OAUTH_ISSUER or TOGELLO_API_BASE_URL is required in production');
