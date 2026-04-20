@@ -46,10 +46,18 @@ async function main() {
       }
     }
 
+    const publicBaseUrl = getRemotePublicBaseUrl(port)
+    const oauthIssuer =
+      getEnvValue('TOGELLO_OAUTH_ISSUER') ??
+      getEnvValue('TOGELLO_API_BASE_URL') ??
+      'http://localhost:8000'
+
     await startRemoteServer({
       host,
       port,
       authMode,
+      publicBaseUrl,
+      oauthIssuer,
       sseKeepAliveMs: keepAliveMs,
     })
     return
@@ -74,6 +82,22 @@ function getArgValue(args: string[], key: string): string | undefined {
     return undefined
   }
   return args[index + 1]
+}
+
+function getEnvValue(name: string): string | undefined {
+  const value = process.env[name]?.trim()
+  return value ? value : undefined
+}
+
+function getRemotePublicBaseUrl(port: number): string {
+  const publicBaseUrl = getEnvValue('TOGELLO_MCP_PUBLIC_BASE_URL')
+  if (publicBaseUrl) {
+    return publicBaseUrl
+  }
+  if (getEnvValue('ENV') === 'production') {
+    throw new Error('TOGELLO_MCP_PUBLIC_BASE_URL is required in production')
+  }
+  return `http://localhost:${port}`
 }
 
 function parseRemoteAuthMode(value: string | undefined): RemoteAuthMode {

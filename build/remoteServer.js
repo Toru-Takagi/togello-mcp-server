@@ -2,9 +2,21 @@ import { createServer } from 'node:http';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { parseBearerToken } from './bearerToken.js';
 import { createMcpServer } from './mcpServer.js';
+const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource';
+const supportedScopes = [
+    'offline_access',
+    'tasks:read',
+    'tasks:write',
+    'activity:read',
+    'activity:write',
+    'calendar:read',
+];
 export async function startRemoteServer(options) {
     const ssePath = options.ssePath ?? '/sse';
     const messagePath = options.messagePath ?? '/message';
+    const publicBaseUrl = options.publicBaseUrl;
+    const oauthIssuer = options.oauthIssuer;
+    const protectedResourceMetadataUrl = `${trimTrailingSlash(publicBaseUrl)}${protectedResourceMetadataPath}`;
     const sessions = new Map();
     const resolveUpstreamToken = (sessionId) => {
         if (!sessionId) {
@@ -15,10 +27,24 @@ export async function startRemoteServer(options) {
     const server = createServer(async (req, res) => {
         try {
             const requestUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+            if (req.method === 'GET' &&
+                requestUrl.pathname === protectedResourceMetadataPath) {
+                writeJsonResponse(res, {
+                    resource: publicBaseUrl,
+                    authorization_servers: [oauthIssuer],
+                    scopes_supported: supportedScopes,
+                    bearer_methods_supported: ['header'],
+                });
+                return;
+            }
             if (req.method === 'GET' && requestUrl.pathname === ssePath) {
                 const upstreamToken = getUpstreamTokenForSse(req.headers.authorization, options.authMode);
                 if (options.authMode === 'passthrough' && !upstreamToken) {
-                    res.writeHead(401).end('Unauthorized');
+                    res
+                        .writeHead(401, {
+                        'WWW-Authenticate': `Bearer resource_metadata="${protectedResourceMetadataUrl}"`,
+                    })
+                        .end('Unauthorized');
                     return;
                 }
                 const transport = new SSEServerTransport(messagePath, res);
@@ -92,6 +118,16 @@ export async function startRemoteServer(options) {
         server.listen(options.port, options.host, () => resolve());
     });
     console.log(`Remote MCP server listening on http://${options.host}:${options.port}${ssePath}`);
+}
+function trimTrailingSlash(url) {
+    return url.replace(/\/+$/, '');
+}
+function writeJsonResponse(res, body) {
+    res.writeHead(200, {
+        'Cache-Control': 'no-store',
+        'Content-Type': 'application/json',
+    });
+    res.end(JSON.stringify(body));
 }
 function getUpstreamTokenForSse(authorizationHeader, authMode) {
     if (authMode === 'env') {

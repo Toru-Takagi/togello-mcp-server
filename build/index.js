@@ -29,10 +29,16 @@ async function main() {
                 throw new Error(`Invalid TOGELLO_MCP_SSE_KEEPALIVE_MS: ${keepAliveMsString}`);
             }
         }
+        const publicBaseUrl = getRemotePublicBaseUrl(port);
+        const oauthIssuer = getEnvValue('TOGELLO_OAUTH_ISSUER') ??
+            getEnvValue('TOGELLO_API_BASE_URL') ??
+            'http://localhost:8000';
         await startRemoteServer({
             host,
             port,
             authMode,
+            publicBaseUrl,
+            oauthIssuer,
             sseKeepAliveMs: keepAliveMs,
         });
         return;
@@ -53,6 +59,20 @@ function getArgValue(args, key) {
         return undefined;
     }
     return args[index + 1];
+}
+function getEnvValue(name) {
+    const value = process.env[name]?.trim();
+    return value ? value : undefined;
+}
+function getRemotePublicBaseUrl(port) {
+    const publicBaseUrl = getEnvValue('TOGELLO_MCP_PUBLIC_BASE_URL');
+    if (publicBaseUrl) {
+        return publicBaseUrl;
+    }
+    if (getEnvValue('ENV') === 'production') {
+        throw new Error('TOGELLO_MCP_PUBLIC_BASE_URL is required in production');
+    }
+    return `http://localhost:${port}`;
 }
 function parseRemoteAuthMode(value) {
     if (value === undefined) {
