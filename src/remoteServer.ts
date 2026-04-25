@@ -1,4 +1,4 @@
-import { createServer } from 'node:http'
+import { createServer, type ServerResponse } from 'node:http'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { parseBearerToken } from './bearerToken.js'
 import { type UpstreamTokenResolver, createMcpServer } from './mcpServer.js'
@@ -9,6 +9,8 @@ export type StartRemoteServerOptions = {
   host: string
   port: number
   authMode: RemoteAuthMode
+  publicBaseUrl: string
+  oauthIssuer: string
   ssePath?: string
   messagePath?: string
   sseKeepAliveMs?: number
@@ -19,11 +21,31 @@ type Session = {
   upstreamToken?: string
 }
 
+type OAuthProtectedResourceMetadata = {
+  resource: string
+  authorization_servers: string[]
+  scopes_supported: string[]
+  bearer_methods_supported: string[]
+}
+
+const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource'
+const supportedScopes = [
+  'offline_access',
+  'tasks:read',
+  'tasks:write',
+  'activity:read',
+  'activity:write',
+  'calendar:read',
+]
+
 export async function startRemoteServer(
   options: StartRemoteServerOptions,
 ): Promise<void> {
   const ssePath = options.ssePath ?? '/sse'
   const messagePath = options.messagePath ?? '/message'
+  const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl)
+  const oauthIssuer = options.oauthIssuer
+  const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`
   const sessions = new Map<string, Session>()
 
   const resolveUpstreamToken: UpstreamTokenResolver = (sessionId) => {
@@ -40,13 +62,33 @@ export async function startRemoteServer(
         `http://${req.headers.host ?? 'localhost'}`,
       )
 
+      if (requestUrl.pathname === protectedResourceMetadataPath) {
+        if (req.method === 'OPTIONS') {
+          writeOptionsResponse(res)
+          return
+        }
+        if (req.method === 'GET') {
+          writeJsonResponse(res, {
+            resource: publicBaseUrl,
+            authorization_servers: [oauthIssuer],
+            scopes_supported: supportedScopes,
+            bearer_methods_supported: ['header'],
+          })
+          return
+        }
+      }
+
       if (req.method === 'GET' && requestUrl.pathname === ssePath) {
         const upstreamToken = getUpstreamTokenForSse(
           req.headers.authorization,
           options.authMode,
         )
         if (options.authMode === 'passthrough' && !upstreamToken) {
-          res.writeHead(401).end('Unauthorized')
+          res
+            .writeHead(401, {
+              'WWW-Authenticate': `Bearer resource_metadata="${protectedResourceMetadataUrl}"`,
+            })
+            .end('Unauthorized')
           return
         }
 
@@ -132,6 +174,33 @@ export async function startRemoteServer(
   console.log(
     `Remote MCP server listening on http://${options.host}:${options.port}${ssePath}`,
   )
+}
+
+function trimTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, '')
+}
+
+function writeJsonResponse(
+  res: ServerResponse,
+  body: OAuthProtectedResourceMetadata,
+): void {
+  res.writeHead(200, {
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'no-store',
+    'Content-Type': 'application/json',
+  })
+  res.end(JSON.stringify(body))
+}
+
+function writeOptionsResponse(res: ServerResponse): void {
+  res.writeHead(204, {
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Origin': '*',
+  })
+  res.end()
 }
 
 function getUpstreamTokenForSse(
