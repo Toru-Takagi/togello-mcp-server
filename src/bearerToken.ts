@@ -1,4 +1,6 @@
-export function parseBearerToken(authorizationHeader: string | undefined): string | undefined {
+export function parseBearerToken(
+  authorizationHeader: string | undefined,
+): string | undefined {
   if (!authorizationHeader) {
     return undefined
   }

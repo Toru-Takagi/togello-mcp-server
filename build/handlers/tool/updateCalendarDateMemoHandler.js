@@ -1,5 +1,6 @@
 import { httpClient } from '../../client.js';
-export const updateCalendarDateMemoHandler = async ({ date, memo }) => {
+import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
+export const updateCalendarDateMemoHandler = async ({ date, memo, }) => {
     try {
         const normalizedMemo = memo.trim();
         await httpClient.putJson({
@@ -8,25 +9,14 @@ export const updateCalendarDateMemoHandler = async ({ date, memo }) => {
                 memo: normalizedMemo,
             },
         });
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: 'Calendar date memo updated successfully.',
-                },
-            ],
-        };
+        return jsonToolResponse({
+            targetDate: date,
+            memo: normalizedMemo,
+            updated: true,
+        });
     }
     catch (error) {
         console.error('Error updating calendar date memo:', error);
-        return {
-            isError: true,
-            content: [
-                {
-                    type: 'text',
-                    text: `Error updating calendar date memo: ${error}`,
-                },
-            ],
-        };
+        return errorToolResponse('Error updating calendar date memo');
     }
 };

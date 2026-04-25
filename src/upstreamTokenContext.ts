@@ -16,4 +16,3 @@ export async function runWithUpstreamToken<T>(
 export function getUpstreamToken(): string | undefined {
   return upstreamTokenStorage.getStore()?.token
 }
-
