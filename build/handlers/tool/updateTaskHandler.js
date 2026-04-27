@@ -1,11 +1,20 @@
 import { httpClient } from '../../client.js';
 import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
-export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartDate, scheduledEndDate, url, detail, }) => {
+export const updateTaskHandler = async ({ todoUUID, isCompleted, status, scheduledStartDate, scheduledEndDate, url, detail, }) => {
     try {
+        if (isCompleted === undefined &&
+            status === undefined &&
+            scheduledStartDate === undefined &&
+            scheduledEndDate === undefined &&
+            url === undefined &&
+            detail === undefined) {
+            return errorToolResponse('At least one update field is required');
+        }
         await httpClient.putJson({
             path: `/v2/integration/todo/${encodeURIComponent(todoUUID)}`,
             body: {
                 isCompleted,
+                status,
                 scheduledStartDate,
                 scheduledEndDate,
                 url,
@@ -15,6 +24,7 @@ export const updateTaskHandler = async ({ todoUUID, isCompleted, scheduledStartD
         return jsonToolResponse({
             todoUUID,
             isCompleted,
+            status,
             updated: true,
         });
     }

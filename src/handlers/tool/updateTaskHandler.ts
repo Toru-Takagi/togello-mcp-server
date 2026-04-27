@@ -3,7 +3,8 @@ import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
 export type UpdateTaskHandlerArgs = {
   todoUUID: string
-  isCompleted: boolean
+  isCompleted?: boolean
+  status?: 'TODO' | 'DOING' | 'DONE'
   scheduledStartDate?: string
   scheduledEndDate?: string
   url?: string
@@ -11,7 +12,8 @@ export type UpdateTaskHandlerArgs = {
 }
 
 type UpdateTaskRequest = {
-  isCompleted: boolean
+  isCompleted?: boolean
+  status?: 'TODO' | 'DOING' | 'DONE'
   scheduledStartDate?: string
   scheduledEndDate?: string
   url?: string
@@ -21,16 +23,29 @@ type UpdateTaskRequest = {
 export const updateTaskHandler = async ({
   todoUUID,
   isCompleted,
+  status,
   scheduledStartDate,
   scheduledEndDate,
   url,
   detail,
 }: UpdateTaskHandlerArgs) => {
   try {
+    if (
+      isCompleted === undefined &&
+      status === undefined &&
+      scheduledStartDate === undefined &&
+      scheduledEndDate === undefined &&
+      url === undefined &&
+      detail === undefined
+    ) {
+      return errorToolResponse('At least one update field is required')
+    }
+
     await httpClient.putJson<null, UpdateTaskRequest>({
       path: `/v2/integration/todo/${encodeURIComponent(todoUUID)}`,
       body: {
         isCompleted,
+        status,
         scheduledStartDate,
         scheduledEndDate,
         url,
@@ -40,6 +55,7 @@ export const updateTaskHandler = async ({
     return jsonToolResponse({
       todoUUID,
       isCompleted,
+      status,
       updated: true,
     })
   } catch (error) {
