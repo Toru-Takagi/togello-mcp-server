@@ -41,6 +41,10 @@ export const updateTaskHandler = async ({
       return errorToolResponse('At least one update field is required')
     }
 
+    if (isCompleted !== undefined && status !== undefined) {
+      return errorToolResponse('Specify either isCompleted or status, not both')
+    }
+
     await httpClient.putJson<null, UpdateTaskRequest>({
       path: `/v2/integration/todo/${encodeURIComponent(todoUUID)}`,
       body: {
