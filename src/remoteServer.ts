@@ -39,6 +39,7 @@ type OAuthProtectedResourceMetadata = {
 }
 
 const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource'
+const maxRequestBodyBytes = 1_000_000
 const supportedScopes = [
   'offline_access',
   'tasks:read',
@@ -111,7 +112,7 @@ export async function startRemoteServer(
       }
 
       if (req.method === 'GET' && requestUrl.pathname === ssePath) {
-        const upstreamToken = getUpstreamTokenForSse(
+        const upstreamToken = getUpstreamToken(
           req.headers.authorization,
           options.authMode,
         )
@@ -244,13 +245,25 @@ async function handleStreamableHttpRequest({
     return
   }
 
-  const body = await readJsonBody(req).catch(() => undefined)
-  if (!includesInitializeRequest(body)) {
-    writeJsonRpcError(res, 400, 'Bad Request: No valid session ID provided')
+  let body: unknown
+  try {
+    body = await readJsonBody(req)
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      writeJsonRpcError(res, 413, 'Payload too large')
+      return
+    }
+
+    writeJsonRpcError(res, 400, 'Bad Request: Invalid JSON body')
     return
   }
 
-  const upstreamToken = getUpstreamTokenForStreamableHttp(
+  if (!includesInitializeRequest(body)) {
+    writeJsonRpcError(res, 400, 'Bad Request: Missing or invalid initialize request')
+    return
+  }
+
+  const upstreamToken = getUpstreamToken(
     req.headers.authorization,
     authMode,
   )
@@ -292,8 +305,17 @@ async function handleStreamableHttpRequest({
     void mcpServer.close().catch(() => undefined)
   }
 
-  await mcpServer.connect(transport)
-  await transport.handleRequest(req, res, body)
+  try {
+    await mcpServer.connect(transport)
+    await transport.handleRequest(req, res, body)
+  } catch (error) {
+    const initializedSessionId = transport.sessionId
+    if (initializedSessionId) {
+      sessions.delete(initializedSessionId)
+    }
+    await mcpServer.close().catch(() => undefined)
+    throw error
+  }
 }
 
 function trimTrailingSlash(url: string): string {
@@ -373,8 +395,14 @@ function getHeaderValue(
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []
+  let totalBytes = 0
   for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    totalBytes += buffer.byteLength
+    if (totalBytes > maxRequestBodyBytes) {
+      throw new RequestBodyTooLargeError()
+    }
+    chunks.push(buffer)
   }
 
   const rawBody = Buffer.concat(chunks).toString('utf8').trim()
@@ -392,17 +420,9 @@ function includesInitializeRequest(body: unknown): boolean {
   return isInitializeRequest(body)
 }
 
-function getUpstreamTokenForSse(
-  authorizationHeader: string | undefined,
-  authMode: RemoteAuthMode,
-): string | undefined {
-  if (authMode === 'env') {
-    return process.env.TOGELLO_API_TOKEN
-  }
-  return parseBearerToken(authorizationHeader)
-}
+class RequestBodyTooLargeError extends Error {}
 
-function getUpstreamTokenForStreamableHttp(
+function getUpstreamToken(
   authorizationHeader: string | undefined,
   authMode: RemoteAuthMode,
 ): string | undefined {
