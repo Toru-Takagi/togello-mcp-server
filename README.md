@@ -29,7 +29,7 @@ Use this for desktop clients and local developer tools that launch MCP servers o
 
 ## Remote MCP
 
-Remote mode exposes an SSE endpoint at `/sse` and a message endpoint at `/message`.
+Remote mode exposes a Streamable HTTP endpoint at `/mcp`. It also keeps the legacy SSE endpoint at `/sse` and message endpoint at `/message` for older MCP clients.
 
 ```bash
 TOGELLO_MCP_MODE=remote \
@@ -42,7 +42,7 @@ npm start
 Connect remote MCP clients to:
 
 ```text
-https://your-domain.example/sse
+https://your-domain.example/mcp
 ```
 
 `passthrough` auth expects each remote client request to send its own Togello API token as an `Authorization: Bearer ...` header. Use this mode for published remote MCP servers.

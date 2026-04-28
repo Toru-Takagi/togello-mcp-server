@@ -1,5 +1,8 @@
-import { createServer, type ServerResponse } from 'node:http'
+import { randomUUID } from 'node:crypto'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { parseBearerToken } from './bearerToken.js'
 import { type UpstreamTokenResolver, createMcpServer } from './mcpServer.js'
 
@@ -11,14 +14,21 @@ export type StartRemoteServerOptions = {
   authMode: RemoteAuthMode
   publicBaseUrl: string
   oauthIssuer: string
+  mcpPath?: string
   ssePath?: string
   messagePath?: string
   sseKeepAliveMs?: number
 }
 
-type Session = {
+type SseSession = {
   transport: SSEServerTransport
   upstreamToken?: string
+}
+
+type StreamableSession = {
+  transport: StreamableHTTPServerTransport
+  upstreamToken?: string
+  closeMcpServer: () => Promise<void>
 }
 
 type OAuthProtectedResourceMetadata = {
@@ -41,18 +51,23 @@ const supportedScopes = [
 export async function startRemoteServer(
   options: StartRemoteServerOptions,
 ): Promise<void> {
+  const mcpPath = options.mcpPath ?? '/mcp'
   const ssePath = options.ssePath ?? '/sse'
   const messagePath = options.messagePath ?? '/message'
   const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl)
   const oauthIssuer = options.oauthIssuer
   const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`
-  const sessions = new Map<string, Session>()
+  const sseSessions = new Map<string, SseSession>()
+  const streamableSessions = new Map<string, StreamableSession>()
 
   const resolveUpstreamToken: UpstreamTokenResolver = (sessionId) => {
     if (!sessionId) {
       return undefined
     }
-    return sessions.get(sessionId)?.upstreamToken
+    return (
+      streamableSessions.get(sessionId)?.upstreamToken ??
+      sseSessions.get(sessionId)?.upstreamToken
+    )
   }
 
   const server = createServer(async (req, res) => {
@@ -78,6 +93,23 @@ export async function startRemoteServer(
         }
       }
 
+      if (requestUrl.pathname === mcpPath) {
+        if (req.method === 'OPTIONS') {
+          writeMcpOptionsResponse(res)
+          return
+        }
+
+        await handleStreamableHttpRequest({
+          req,
+          res,
+          authMode: options.authMode,
+          protectedResourceMetadataUrl,
+          resolveUpstreamToken,
+          sessions: streamableSessions,
+        })
+        return
+      }
+
       if (req.method === 'GET' && requestUrl.pathname === ssePath) {
         const upstreamToken = getUpstreamTokenForSse(
           req.headers.authorization,
@@ -93,7 +125,7 @@ export async function startRemoteServer(
         }
 
         const transport = new SSEServerTransport(messagePath, res)
-        sessions.set(transport.sessionId, { transport, upstreamToken })
+        sseSessions.set(transport.sessionId, { transport, upstreamToken })
 
         const mcpServer = createMcpServer({
           resolveUpstreamToken,
@@ -116,7 +148,7 @@ export async function startRemoteServer(
             return
           }
           closed = true
-          sessions.delete(transport.sessionId)
+          sseSessions.delete(transport.sessionId)
           if (keepAliveTimer) {
             clearInterval(keepAliveTimer)
           }
@@ -128,7 +160,7 @@ export async function startRemoteServer(
         } catch (error) {
           if (!closed) {
             closed = true
-            sessions.delete(transport.sessionId)
+            sseSessions.delete(transport.sessionId)
             if (keepAliveTimer) {
               clearInterval(keepAliveTimer)
             }
@@ -146,7 +178,7 @@ export async function startRemoteServer(
           return
         }
 
-        const session = sessions.get(sessionId)
+        const session = sseSessions.get(sessionId)
         if (!session) {
           res.writeHead(404).end('Session not found')
           return
@@ -172,8 +204,96 @@ export async function startRemoteServer(
   })
 
   console.log(
-    `Remote MCP server listening on http://${options.host}:${options.port}${ssePath}`,
+    `Remote MCP server listening on http://${options.host}:${options.port}${mcpPath}`,
   )
+}
+
+type HandleStreamableHttpRequestOptions = {
+  req: IncomingMessage
+  res: ServerResponse
+  authMode: RemoteAuthMode
+  protectedResourceMetadataUrl: string
+  resolveUpstreamToken: UpstreamTokenResolver
+  sessions: Map<string, StreamableSession>
+}
+
+async function handleStreamableHttpRequest({
+  req,
+  res,
+  authMode,
+  protectedResourceMetadataUrl,
+  resolveUpstreamToken,
+  sessions,
+}: HandleStreamableHttpRequestOptions): Promise<void> {
+  writeMcpCorsHeaders(res)
+
+  const sessionId = getHeaderValue(req.headers['mcp-session-id'])
+  const existingSession = sessionId ? sessions.get(sessionId) : undefined
+  if (existingSession) {
+    await existingSession.transport.handleRequest(req, res)
+    return
+  }
+
+  if (sessionId) {
+    writeJsonRpcError(res, 404, 'Session not found')
+    return
+  }
+
+  if (req.method !== 'POST') {
+    writeJsonRpcError(res, 405, 'Method not allowed')
+    return
+  }
+
+  const body = await readJsonBody(req).catch(() => undefined)
+  if (!includesInitializeRequest(body)) {
+    writeJsonRpcError(res, 400, 'Bad Request: No valid session ID provided')
+    return
+  }
+
+  const upstreamToken = getUpstreamTokenForStreamableHttp(
+    req.headers.authorization,
+    authMode,
+  )
+  if (authMode === 'passthrough' && !upstreamToken) {
+    res
+      .writeHead(401, {
+        'WWW-Authenticate': `Bearer resource_metadata="${protectedResourceMetadataUrl}"`,
+      })
+      .end('Unauthorized')
+    return
+  }
+
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+    onsessioninitialized: (initializedSessionId) => {
+      sessions.set(initializedSessionId, {
+        transport,
+        upstreamToken,
+        closeMcpServer: () => mcpServer.close(),
+      })
+    },
+    onsessionclosed: async (closedSessionId) => {
+      const session = sessions.get(closedSessionId)
+      sessions.delete(closedSessionId)
+      await session?.closeMcpServer().catch(() => undefined)
+    },
+  })
+
+  const mcpServer = createMcpServer({
+    resolveUpstreamToken,
+    requireUpstreamToken: authMode === 'passthrough',
+  })
+
+  transport.onclose = () => {
+    const initializedSessionId = transport.sessionId
+    if (initializedSessionId) {
+      sessions.delete(initializedSessionId)
+    }
+    void mcpServer.close().catch(() => undefined)
+  }
+
+  await mcpServer.connect(transport)
+  await transport.handleRequest(req, res, body)
 }
 
 function trimTrailingSlash(url: string): string {
@@ -203,7 +323,86 @@ function writeOptionsResponse(res: ServerResponse): void {
   res.end()
 }
 
+function writeMcpCorsHeaders(res: ServerResponse): void {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, Mcp-Session-Id, mcp-session-id, Last-Event-ID, mcp-protocol-version',
+  )
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+  res.setHeader(
+    'Access-Control-Expose-Headers',
+    'Mcp-Session-Id, mcp-session-id, mcp-protocol-version',
+  )
+}
+
+function writeMcpOptionsResponse(res: ServerResponse): void {
+  writeMcpCorsHeaders(res)
+  res.writeHead(204)
+  res.end()
+}
+
+function writeJsonRpcError(
+  res: ServerResponse,
+  httpStatus: number,
+  message: string,
+): void {
+  res.writeHead(httpStatus, {
+    'Content-Type': 'application/json',
+  })
+  res.end(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message,
+      },
+      id: null,
+    }),
+  )
+}
+
+function getHeaderValue(
+  header: string | string[] | undefined,
+): string | undefined {
+  if (Array.isArray(header)) {
+    return header[0]
+  }
+  return header
+}
+
+async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = []
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+  }
+
+  const rawBody = Buffer.concat(chunks).toString('utf8').trim()
+  if (!rawBody) {
+    return undefined
+  }
+
+  return JSON.parse(rawBody)
+}
+
+function includesInitializeRequest(body: unknown): boolean {
+  if (Array.isArray(body)) {
+    return body.some((item) => isInitializeRequest(item))
+  }
+  return isInitializeRequest(body)
+}
+
 function getUpstreamTokenForSse(
+  authorizationHeader: string | undefined,
+  authMode: RemoteAuthMode,
+): string | undefined {
+  if (authMode === 'env') {
+    return process.env.TOGELLO_API_TOKEN
+  }
+  return parseBearerToken(authorizationHeader)
+}
+
+function getUpstreamTokenForStreamableHttp(
   authorizationHeader: string | undefined,
   authMode: RemoteAuthMode,
 ): string | undefined {

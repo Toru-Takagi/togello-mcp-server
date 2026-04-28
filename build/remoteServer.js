@@ -1,5 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { parseBearerToken } from './bearerToken.js';
 import { createMcpServer } from './mcpServer.js';
 const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource';
@@ -12,17 +15,20 @@ const supportedScopes = [
     'calendar:read',
 ];
 export async function startRemoteServer(options) {
+    const mcpPath = options.mcpPath ?? '/mcp';
     const ssePath = options.ssePath ?? '/sse';
     const messagePath = options.messagePath ?? '/message';
     const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl);
     const oauthIssuer = options.oauthIssuer;
     const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`;
-    const sessions = new Map();
+    const sseSessions = new Map();
+    const streamableSessions = new Map();
     const resolveUpstreamToken = (sessionId) => {
         if (!sessionId) {
             return undefined;
         }
-        return sessions.get(sessionId)?.upstreamToken;
+        return (streamableSessions.get(sessionId)?.upstreamToken ??
+            sseSessions.get(sessionId)?.upstreamToken);
     };
     const server = createServer(async (req, res) => {
         try {
@@ -42,6 +48,21 @@ export async function startRemoteServer(options) {
                     return;
                 }
             }
+            if (requestUrl.pathname === mcpPath) {
+                if (req.method === 'OPTIONS') {
+                    writeMcpOptionsResponse(res);
+                    return;
+                }
+                await handleStreamableHttpRequest({
+                    req,
+                    res,
+                    authMode: options.authMode,
+                    protectedResourceMetadataUrl,
+                    resolveUpstreamToken,
+                    sessions: streamableSessions,
+                });
+                return;
+            }
             if (req.method === 'GET' && requestUrl.pathname === ssePath) {
                 const upstreamToken = getUpstreamTokenForSse(req.headers.authorization, options.authMode);
                 if (options.authMode === 'passthrough' && !upstreamToken) {
@@ -53,7 +74,7 @@ export async function startRemoteServer(options) {
                     return;
                 }
                 const transport = new SSEServerTransport(messagePath, res);
-                sessions.set(transport.sessionId, { transport, upstreamToken });
+                sseSessions.set(transport.sessionId, { transport, upstreamToken });
                 const mcpServer = createMcpServer({
                     resolveUpstreamToken,
                     requireUpstreamToken: options.authMode === 'passthrough',
@@ -72,7 +93,7 @@ export async function startRemoteServer(options) {
                         return;
                     }
                     closed = true;
-                    sessions.delete(transport.sessionId);
+                    sseSessions.delete(transport.sessionId);
                     if (keepAliveTimer) {
                         clearInterval(keepAliveTimer);
                     }
@@ -84,7 +105,7 @@ export async function startRemoteServer(options) {
                 catch (error) {
                     if (!closed) {
                         closed = true;
-                        sessions.delete(transport.sessionId);
+                        sseSessions.delete(transport.sessionId);
                         if (keepAliveTimer) {
                             clearInterval(keepAliveTimer);
                         }
@@ -100,7 +121,7 @@ export async function startRemoteServer(options) {
                     res.writeHead(400).end('Missing sessionId');
                     return;
                 }
-                const session = sessions.get(sessionId);
+                const session = sseSessions.get(sessionId);
                 if (!session) {
                     res.writeHead(404).end('Session not found');
                     return;
@@ -122,7 +143,66 @@ export async function startRemoteServer(options) {
         server.once('error', reject);
         server.listen(options.port, options.host, () => resolve());
     });
-    console.log(`Remote MCP server listening on http://${options.host}:${options.port}${ssePath}`);
+    console.log(`Remote MCP server listening on http://${options.host}:${options.port}${mcpPath}`);
+}
+async function handleStreamableHttpRequest({ req, res, authMode, protectedResourceMetadataUrl, resolveUpstreamToken, sessions, }) {
+    writeMcpCorsHeaders(res);
+    const sessionId = getHeaderValue(req.headers['mcp-session-id']);
+    const existingSession = sessionId ? sessions.get(sessionId) : undefined;
+    if (existingSession) {
+        await existingSession.transport.handleRequest(req, res);
+        return;
+    }
+    if (sessionId) {
+        writeJsonRpcError(res, 404, 'Session not found');
+        return;
+    }
+    if (req.method !== 'POST') {
+        writeJsonRpcError(res, 405, 'Method not allowed');
+        return;
+    }
+    const body = await readJsonBody(req).catch(() => undefined);
+    if (!includesInitializeRequest(body)) {
+        writeJsonRpcError(res, 400, 'Bad Request: No valid session ID provided');
+        return;
+    }
+    const upstreamToken = getUpstreamTokenForStreamableHttp(req.headers.authorization, authMode);
+    if (authMode === 'passthrough' && !upstreamToken) {
+        res
+            .writeHead(401, {
+            'WWW-Authenticate': `Bearer resource_metadata="${protectedResourceMetadataUrl}"`,
+        })
+            .end('Unauthorized');
+        return;
+    }
+    const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (initializedSessionId) => {
+            sessions.set(initializedSessionId, {
+                transport,
+                upstreamToken,
+                closeMcpServer: () => mcpServer.close(),
+            });
+        },
+        onsessionclosed: async (closedSessionId) => {
+            const session = sessions.get(closedSessionId);
+            sessions.delete(closedSessionId);
+            await session?.closeMcpServer().catch(() => undefined);
+        },
+    });
+    const mcpServer = createMcpServer({
+        resolveUpstreamToken,
+        requireUpstreamToken: authMode === 'passthrough',
+    });
+    transport.onclose = () => {
+        const initializedSessionId = transport.sessionId;
+        if (initializedSessionId) {
+            sessions.delete(initializedSessionId);
+        }
+        void mcpServer.close().catch(() => undefined);
+    };
+    await mcpServer.connect(transport);
+    await transport.handleRequest(req, res, body);
 }
 function trimTrailingSlash(url) {
     return url.replace(/\/+$/, '');
@@ -145,7 +225,60 @@ function writeOptionsResponse(res) {
     });
     res.end();
 }
+function writeMcpCorsHeaders(res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Mcp-Session-Id, mcp-session-id, Last-Event-ID, mcp-protocol-version');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id, mcp-session-id, mcp-protocol-version');
+}
+function writeMcpOptionsResponse(res) {
+    writeMcpCorsHeaders(res);
+    res.writeHead(204);
+    res.end();
+}
+function writeJsonRpcError(res, httpStatus, message) {
+    res.writeHead(httpStatus, {
+        'Content-Type': 'application/json',
+    });
+    res.end(JSON.stringify({
+        jsonrpc: '2.0',
+        error: {
+            code: -32000,
+            message,
+        },
+        id: null,
+    }));
+}
+function getHeaderValue(header) {
+    if (Array.isArray(header)) {
+        return header[0];
+    }
+    return header;
+}
+async function readJsonBody(req) {
+    const chunks = [];
+    for await (const chunk of req) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const rawBody = Buffer.concat(chunks).toString('utf8').trim();
+    if (!rawBody) {
+        return undefined;
+    }
+    return JSON.parse(rawBody);
+}
+function includesInitializeRequest(body) {
+    if (Array.isArray(body)) {
+        return body.some((item) => isInitializeRequest(item));
+    }
+    return isInitializeRequest(body);
+}
 function getUpstreamTokenForSse(authorizationHeader, authMode) {
+    if (authMode === 'env') {
+        return process.env.TOGELLO_API_TOKEN;
+    }
+    return parseBearerToken(authorizationHeader);
+}
+function getUpstreamTokenForStreamableHttp(authorizationHeader, authMode) {
     if (authMode === 'env') {
         return process.env.TOGELLO_API_TOKEN;
     }
