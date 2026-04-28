@@ -43,7 +43,7 @@ export function createMcpServer(options = {}) {
         },
     });
     server.registerTool('get-tasks-list', {
-        description: 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / detail / scheduled start date and time / scheduled end date and time / priority / category',
+        description: 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / status / detail / scheduled start date and time / scheduled end date and time / priority / category',
         inputSchema: {
             categoryUUIDs: z
                 .array(z.string())
@@ -87,23 +87,28 @@ export function createMcpServer(options = {}) {
                 .describe('Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it.'),
             isCompleted: z
                 .boolean()
-                .describe('Required. Updates the completion status of the task. If true, it is completed.'),
+                .optional()
+                .describe('Optional. Backward-compatible completion update. true marks the task done. false preserves existing TODO or DOING tasks and reopens DONE tasks to TODO.'),
+            status: z
+                .enum(['TODO', 'DOING', 'DONE'])
+                .optional()
+                .describe('Optional. Updates the todo status directly. Use this to switch tasks between TODO, DOING, and DONE.'),
             scheduledStartDate: z
                 .string()
                 .optional()
-                .describe('Scheduled start date in ISO format. If the user does not specify, the information obtained from get-tasks-list is passed.'),
+                .describe('Scheduled start date in ISO format. If omitted, the current value is kept.'),
             scheduledEndDate: z
                 .string()
                 .optional()
-                .describe('Scheduled end date in ISO format. If the user does not specify, the information obtained from get-tasks-list is passed.'),
+                .describe('Scheduled end date in ISO format. If omitted, the current value is kept.'),
             url: z
                 .string()
                 .optional()
-                .describe('Optional URL associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.'),
+                .describe('Optional URL associated with the task. If omitted, the current value is kept.'),
             detail: z
                 .string()
                 .optional()
-                .describe('Optional detail associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.'),
+                .describe('Optional detail associated with the task. If omitted, the current value is kept.'),
         },
     }, withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-calendar-date-memo', {

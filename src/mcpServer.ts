@@ -79,7 +79,7 @@ export function createMcpServer(
     'get-tasks-list',
     {
       description:
-        'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / detail / scheduled start date and time / scheduled end date and time / priority / category',
+        'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / status / detail / scheduled start date and time / scheduled end date and time / priority / category',
       inputSchema: {
         categoryUUIDs: z
           .array(z.string())
@@ -141,32 +141,39 @@ export function createMcpServer(
           ),
         isCompleted: z
           .boolean()
+          .optional()
           .describe(
-            'Required. Updates the completion status of the task. If true, it is completed.',
+            'Optional. Backward-compatible completion update. true marks the task done. false preserves existing TODO or DOING tasks and reopens DONE tasks to TODO.',
+          ),
+        status: z
+          .enum(['TODO', 'DOING', 'DONE'])
+          .optional()
+          .describe(
+            'Optional. Updates the todo status directly. Use this to switch tasks between TODO, DOING, and DONE.',
           ),
         scheduledStartDate: z
           .string()
           .optional()
           .describe(
-            'Scheduled start date in ISO format. If the user does not specify, the information obtained from get-tasks-list is passed.',
+            'Scheduled start date in ISO format. If omitted, the current value is kept.',
           ),
         scheduledEndDate: z
           .string()
           .optional()
           .describe(
-            'Scheduled end date in ISO format. If the user does not specify, the information obtained from get-tasks-list is passed.',
+            'Scheduled end date in ISO format. If omitted, the current value is kept.',
           ),
         url: z
           .string()
           .optional()
           .describe(
-            'Optional URL associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.',
+            'Optional URL associated with the task. If omitted, the current value is kept.',
           ),
         detail: z
           .string()
           .optional()
           .describe(
-            'Optional detail associated with the task. If the user does not specify, the information obtained from get-tasks-list is passed.',
+            'Optional detail associated with the task. If omitted, the current value is kept.',
           ),
       },
     },

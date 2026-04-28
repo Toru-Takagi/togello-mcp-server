@@ -13,6 +13,7 @@ export const getTodoListHandler = async ({ categoryUUIDs, }) => {
             tasks: tasks.map((todo) => ({
                 todoUUID: todo.todoUUID,
                 label: todo.label,
+                status: todo.status,
                 detail: todo.detail,
                 scheduledStartDate: todo.scheduledStartDate,
                 scheduledEndDate: todo.scheduledEndDate,

@@ -22,6 +22,7 @@ export const getTodoListHandler = async ({
       tasks: tasks.map((todo) => ({
         todoUUID: todo.todoUUID,
         label: todo.label,
+        status: todo.status,
         detail: todo.detail,
         scheduledStartDate: todo.scheduledStartDate,
         scheduledEndDate: todo.scheduledEndDate,
@@ -44,6 +45,7 @@ type TodoListResponse = {
   todoSettingUUID: string | null
   label: string
   priorityNumber: number
+  status: 'TODO' | 'DOING' | 'DONE'
   completedAt: string | null
   operatedAt: string
   createdAt: string
