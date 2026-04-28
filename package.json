@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "togello-mcp-server",
-  "version": "1.0.27",
+  "version": "1.0.28",
   "description": "MCP server for Togello tasks, calendar memos, calendar events, and activity logs.",
   "main": "build/index.js",
   "scripts": {
