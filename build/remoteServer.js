@@ -6,6 +6,7 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { parseBearerToken } from './bearerToken.js';
 import { createMcpServer } from './mcpServer.js';
 const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource';
+const openaiAppsChallengePath = '/.well-known/openai-apps-challenge';
 const maxRequestBodyBytes = 1_000_000;
 const supportedScopes = [
     'offline_access',
@@ -22,6 +23,7 @@ export async function startRemoteServer(options) {
     const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl);
     const oauthIssuer = options.oauthIssuer;
     const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`;
+    const openaiAppsChallengeToken = options.openaiAppsChallengeToken?.trim();
     const sseSessions = new Map();
     const streamableSessions = new Map();
     const resolveUpstreamToken = (sessionId) => {
@@ -34,6 +36,16 @@ export async function startRemoteServer(options) {
     const server = createServer(async (req, res) => {
         try {
             const requestUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+            if (requestUrl.pathname === openaiAppsChallengePath) {
+                if (req.method === 'OPTIONS') {
+                    writeOptionsResponse(res);
+                    return;
+                }
+                if (req.method === 'GET' && openaiAppsChallengeToken) {
+                    writeTextResponse(res, openaiAppsChallengeToken);
+                    return;
+                }
+            }
             if (requestUrl.pathname === protectedResourceMetadataPath) {
                 if (req.method === 'OPTIONS') {
                     writeOptionsResponse(res);
@@ -238,6 +250,14 @@ function writeJsonResponse(res, body) {
         'Content-Type': 'application/json',
     });
     res.end(JSON.stringify(body));
+}
+function writeTextResponse(res, body) {
+    res.writeHead(200, {
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-store',
+        'Content-Type': 'text/plain; charset=utf-8',
+    });
+    res.end(body);
 }
 function writeOptionsResponse(res) {
     res.writeHead(204, {
