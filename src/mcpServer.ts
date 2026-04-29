@@ -38,6 +38,14 @@ const calendarDateMemoDateSchema = z
 
 const readOnlyToolAnnotations = {
   readOnlyHint: true,
+  openWorldHint: false,
+  destructiveHint: false,
+}
+
+const privateWriteToolAnnotations = {
+  readOnlyHint: false,
+  openWorldHint: false,
+  destructiveHint: false,
 }
 
 function withUpstreamToken<TArgs extends Record<string, unknown>>(
@@ -121,6 +129,7 @@ export function createMcpServer(
           .optional()
           .describe('Optional detail associated with the task.'),
       },
+      annotations: privateWriteToolAnnotations,
     },
     withUpstreamToken(
       createTaskHandler,
@@ -176,6 +185,7 @@ export function createMcpServer(
             'Optional detail associated with the task. If omitted, the current value is kept.',
           ),
       },
+      annotations: privateWriteToolAnnotations,
     },
     withUpstreamToken(
       updateTaskHandler,
@@ -215,6 +225,7 @@ export function createMcpServer(
             'Memo content for the date. Pass an empty or whitespace-only string to clear the memo.',
           ),
       },
+      annotations: privateWriteToolAnnotations,
     },
     withUpstreamToken(
       updateCalendarDateMemoHandler,
@@ -289,6 +300,7 @@ export function createMcpServer(
             'You must specify a valid itemName obtained from get-activity-item-list. This tool requires a pre-existing activity item.',
           ),
       },
+      annotations: privateWriteToolAnnotations,
     },
     withUpstreamToken(
       startActivityLogHandler,
@@ -308,6 +320,7 @@ export function createMcpServer(
             'You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.',
           ),
       },
+      annotations: privateWriteToolAnnotations,
     },
     withUpstreamToken(
       completeActivityLogHandler,
