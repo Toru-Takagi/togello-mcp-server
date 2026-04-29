@@ -19,6 +19,13 @@ const calendarDateMemoDateSchema = z
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD');
 const readOnlyToolAnnotations = {
     readOnlyHint: true,
+    openWorldHint: false,
+    destructiveHint: false,
+};
+const privateWriteToolAnnotations = {
+    readOnlyHint: false,
+    openWorldHint: false,
+    destructiveHint: false,
 };
 function withUpstreamToken(cb, resolveUpstreamToken, requireUpstreamToken = false) {
     return async (args, extra) => {
@@ -77,6 +84,7 @@ export function createMcpServer(options = {}) {
                 .optional()
                 .describe('Optional detail associated with the task.'),
         },
+        annotations: privateWriteToolAnnotations,
     }, withUpstreamToken(createTaskHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('update-task', {
         description: 'Updates a task in the TODO feature.',
@@ -110,6 +118,7 @@ export function createMcpServer(options = {}) {
                 .optional()
                 .describe('Optional detail associated with the task. If omitted, the current value is kept.'),
         },
+        annotations: privateWriteToolAnnotations,
     }, withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-calendar-date-memo', {
         description: 'Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.',
@@ -126,6 +135,7 @@ export function createMcpServer(options = {}) {
                 .string()
                 .describe('Memo content for the date. Pass an empty or whitespace-only string to clear the memo.'),
         },
+        annotations: privateWriteToolAnnotations,
     }, withUpstreamToken(updateCalendarDateMemoHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-todo-category-list', {
         description: 'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID',
@@ -154,6 +164,7 @@ export function createMcpServer(options = {}) {
                 .string()
                 .describe('You must specify a valid itemName obtained from get-activity-item-list. This tool requires a pre-existing activity item.'),
         },
+        annotations: privateWriteToolAnnotations,
     }, withUpstreamToken(startActivityLogHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('complete-activity-log', {
         description: 'Completes an activity log.',
@@ -163,6 +174,7 @@ export function createMcpServer(options = {}) {
                 .uuid()
                 .describe('You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.'),
         },
+        annotations: privateWriteToolAnnotations,
     }, withUpstreamToken(completeActivityLogHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-japan-current-time', {
         description: 'Returns the current time in Japan (JST).',
