@@ -18,6 +18,7 @@ export type StartRemoteServerOptions = {
   ssePath?: string
   messagePath?: string
   sseKeepAliveMs?: number
+  openaiAppsChallengeToken?: string
 }
 
 type SseSession = {
@@ -39,6 +40,7 @@ type OAuthProtectedResourceMetadata = {
 }
 
 const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource'
+const openaiAppsChallengePath = '/.well-known/openai-apps-challenge'
 const maxRequestBodyBytes = 1_000_000
 const supportedScopes = [
   'offline_access',
@@ -58,6 +60,7 @@ export async function startRemoteServer(
   const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl)
   const oauthIssuer = options.oauthIssuer
   const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`
+  const openaiAppsChallengeToken = options.openaiAppsChallengeToken?.trim()
   const sseSessions = new Map<string, SseSession>()
   const streamableSessions = new Map<string, StreamableSession>()
 
@@ -77,6 +80,17 @@ export async function startRemoteServer(
         req.url ?? '/',
         `http://${req.headers.host ?? 'localhost'}`,
       )
+
+      if (requestUrl.pathname === openaiAppsChallengePath) {
+        if (req.method === 'OPTIONS') {
+          writeOptionsResponse(res)
+          return
+        }
+        if (req.method === 'GET' && openaiAppsChallengeToken) {
+          writeTextResponse(res, openaiAppsChallengeToken)
+          return
+        }
+      }
 
       if (requestUrl.pathname === protectedResourceMetadataPath) {
         if (req.method === 'OPTIONS') {
@@ -334,6 +348,15 @@ function writeJsonResponse(
     'Content-Type': 'application/json',
   })
   res.end(JSON.stringify(body))
+}
+
+function writeTextResponse(res: ServerResponse, body: string): void {
+  res.writeHead(200, {
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'no-store',
+    'Content-Type': 'text/plain; charset=utf-8',
+  })
+  res.end(body)
 }
 
 function writeOptionsResponse(res: ServerResponse): void {

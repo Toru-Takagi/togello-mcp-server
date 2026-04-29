@@ -48,6 +48,9 @@ async function main() {
 
     const publicBaseUrl = getRemotePublicBaseUrl(port)
     const oauthIssuer = getRemoteOAuthIssuer()
+    const openaiAppsChallengeToken =
+      getEnvValue('TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN') ??
+      getEnvValue('OPENAI_APPS_CHALLENGE_TOKEN')
 
     await startRemoteServer({
       host,
@@ -56,6 +59,7 @@ async function main() {
       publicBaseUrl,
       oauthIssuer,
       sseKeepAliveMs: keepAliveMs,
+      openaiAppsChallengeToken,
     })
     return
   }

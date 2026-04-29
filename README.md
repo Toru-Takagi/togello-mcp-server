@@ -51,6 +51,8 @@ https://your-domain.example/mcp
 
 ChatGPT developer mode can add remote MCP servers that use SSE. For production ChatGPT apps or connectors, use `passthrough` auth or a deployment that authenticates each user separately before forwarding requests to Togello.
 
+For OpenAI Apps domain verification, set `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` to the verification token. Remote mode then serves it from `/.well-known/openai-apps-challenge` as `text/plain`.
+
 ## Tools
 
 Read-only tools include MCP `readOnlyHint` annotations and return stable JSON in both `structuredContent` and text content.
