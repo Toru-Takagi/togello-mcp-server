@@ -5,6 +5,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { parseBearerToken } from './bearerToken.js';
 import { createMcpServer } from './mcpServer.js';
+const authorizationServerMetadataPath = '/.well-known/oauth-authorization-server';
 const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource';
 const openaiAppsChallengePath = '/.well-known/openai-apps-challenge';
 const maxRequestBodyBytes = 1_000_000;
@@ -21,8 +22,13 @@ export async function startRemoteServer(options) {
     const ssePath = options.ssePath ?? '/sse';
     const messagePath = options.messagePath ?? '/message';
     const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl);
-    const oauthIssuer = options.oauthIssuer;
+    const oauthIssuer = trimTrailingSlash(options.oauthIssuer);
     const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`;
+    const authorizationServerMetadataUrl = `${oauthIssuer}${authorizationServerMetadataPath}`;
+    const authorizationServerMetadataPaths = new Set([
+        authorizationServerMetadataPath,
+        `${authorizationServerMetadataPath}${mcpPath}`,
+    ]);
     const openaiAppsChallengeToken = options.openaiAppsChallengeToken?.trim();
     const sseSessions = new Map();
     const streamableSessions = new Map();
@@ -43,6 +49,16 @@ export async function startRemoteServer(options) {
                 }
                 if (req.method === 'GET' && openaiAppsChallengeToken) {
                     writeTextResponse(res, openaiAppsChallengeToken);
+                    return;
+                }
+            }
+            if (authorizationServerMetadataPaths.has(requestUrl.pathname)) {
+                if (req.method === 'OPTIONS') {
+                    writeAuthorizationServerMetadataOptionsResponse(res);
+                    return;
+                }
+                if (req.method === 'GET') {
+                    writeRedirectResponse(res, authorizationServerMetadataUrl);
                     return;
                 }
             }
@@ -250,6 +266,24 @@ function writeJsonResponse(res, body) {
         'Content-Type': 'application/json',
     });
     res.end(JSON.stringify(body));
+}
+function writeRedirectResponse(res, location) {
+    res.writeHead(302, {
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-store',
+        Location: location,
+    });
+    res.end();
+}
+function writeAuthorizationServerMetadataOptionsResponse(res) {
+    res.writeHead(204, {
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+    });
+    res.end();
 }
 function writeTextResponse(res, body) {
     res.writeHead(200, {

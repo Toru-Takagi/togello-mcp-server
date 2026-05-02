@@ -39,6 +39,8 @@ type OAuthProtectedResourceMetadata = {
   bearer_methods_supported: string[]
 }
 
+const authorizationServerMetadataPath =
+  '/.well-known/oauth-authorization-server'
 const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource'
 const openaiAppsChallengePath = '/.well-known/openai-apps-challenge'
 const maxRequestBodyBytes = 1_000_000
@@ -58,8 +60,13 @@ export async function startRemoteServer(
   const ssePath = options.ssePath ?? '/sse'
   const messagePath = options.messagePath ?? '/message'
   const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl)
-  const oauthIssuer = options.oauthIssuer
+  const oauthIssuer = trimTrailingSlash(options.oauthIssuer)
   const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`
+  const authorizationServerMetadataUrl = `${oauthIssuer}${authorizationServerMetadataPath}`
+  const authorizationServerMetadataPaths = new Set([
+    authorizationServerMetadataPath,
+    `${authorizationServerMetadataPath}${mcpPath}`,
+  ])
   const openaiAppsChallengeToken = options.openaiAppsChallengeToken?.trim()
   const sseSessions = new Map<string, SseSession>()
   const streamableSessions = new Map<string, StreamableSession>()
@@ -88,6 +95,17 @@ export async function startRemoteServer(
         }
         if (req.method === 'GET' && openaiAppsChallengeToken) {
           writeTextResponse(res, openaiAppsChallengeToken)
+          return
+        }
+      }
+
+      if (authorizationServerMetadataPaths.has(requestUrl.pathname)) {
+        if (req.method === 'OPTIONS') {
+          writeAuthorizationServerMetadataOptionsResponse(res)
+          return
+        }
+        if (req.method === 'GET') {
+          writeRedirectResponse(res, authorizationServerMetadataUrl)
           return
         }
       }
@@ -348,6 +366,30 @@ function writeJsonResponse(
     'Content-Type': 'application/json',
   })
   res.end(JSON.stringify(body))
+}
+
+function writeRedirectResponse(res: ServerResponse, location: string): void {
+  res.writeHead(302, {
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'no-store',
+    Location: location,
+  })
+  res.end()
+}
+
+function writeAuthorizationServerMetadataOptionsResponse(
+  res: ServerResponse,
+): void {
+  res.writeHead(204, {
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Origin': '*',
+  })
+  res.end()
 }
 
 function writeTextResponse(res: ServerResponse, body: string): void {
