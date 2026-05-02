@@ -41,6 +41,12 @@ type OAuthProtectedResourceMetadata = {
 
 const authorizationServerMetadataPath =
   '/.well-known/oauth-authorization-server'
+const authorizationServerMetadataCorsHeaders = {
+  'Access-Control-Allow-Headers':
+    'Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Origin': '*',
+} as const
 const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource'
 const openaiAppsChallengePath = '/.well-known/openai-apps-challenge'
 const maxRequestBodyBytes = 1_000_000
@@ -61,6 +67,7 @@ export async function startRemoteServer(
   const messagePath = options.messagePath ?? '/message'
   const publicBaseUrl = trimTrailingSlash(options.publicBaseUrl)
   const oauthIssuer = trimTrailingSlash(options.oauthIssuer)
+  validatePathlessOAuthIssuer(oauthIssuer)
   const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`
   const authorizationServerMetadataUrl = `${oauthIssuer}${authorizationServerMetadataPath}`
   const authorizationServerMetadataPaths = new Set([
@@ -354,6 +361,15 @@ function trimTrailingSlash(url: string): string {
   return url.replace(/\/+$/, '')
 }
 
+function validatePathlessOAuthIssuer(oauthIssuer: string): void {
+  const { pathname } = new URL(oauthIssuer)
+  if (pathname !== '/') {
+    throw new Error(
+      `Remote OAuth issuer must not include a path: ${oauthIssuer}`,
+    )
+  }
+}
+
 function writeJsonResponse(
   res: ServerResponse,
   body: OAuthProtectedResourceMetadata,
@@ -370,10 +386,7 @@ function writeJsonResponse(
 
 function writeRedirectResponse(res: ServerResponse, location: string): void {
   res.writeHead(302, {
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Origin': '*',
+    ...authorizationServerMetadataCorsHeaders,
     'Cache-Control': 'no-store',
     Location: location,
   })
@@ -383,12 +396,7 @@ function writeRedirectResponse(res: ServerResponse, location: string): void {
 function writeAuthorizationServerMetadataOptionsResponse(
   res: ServerResponse,
 ): void {
-  res.writeHead(204, {
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, MCP-Protocol-Version, mcp-protocol-version',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Origin': '*',
-  })
+  res.writeHead(204, authorizationServerMetadataCorsHeaders)
   res.end()
 }
 
