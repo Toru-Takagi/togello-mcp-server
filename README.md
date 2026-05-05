@@ -53,6 +53,8 @@ ChatGPT developer mode can add remote MCP servers that use SSE. For production C
 
 Remote mode redirects OAuth authorization server metadata discovery paths at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-authorization-server/mcp` to the Togello OAuth issuer configured with `TOGELLO_OAUTH_ISSUER` or `TOGELLO_API_BASE_URL`.
 
+Remote OAuth clients that connect to `/mcp` should discover protected resource metadata at `/.well-known/oauth-protected-resource/mcp`. That metadata returns `resource` as the full MCP endpoint URL, such as `https://your-domain.example/mcp`. Unauthenticated `/mcp` requests include a `WWW-Authenticate` challenge whose `resource_metadata` value points to that `/mcp` metadata path.
+
 The configured OAuth issuer must be an origin URL without a path component.
 
 For OpenAI Apps domain verification, set `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` to the verification token. Remote mode then serves it from `/.well-known/openai-apps-challenge` as `text/plain`. If both `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` and `OPENAI_APPS_CHALLENGE_TOKEN` are set, the Togello-scoped variable takes precedence.

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { createServer } from 'node:http'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
@@ -69,10 +70,36 @@ export async function startRemoteServer(
   const oauthIssuer = trimTrailingSlash(options.oauthIssuer)
   validatePathlessOAuthIssuer(oauthIssuer)
   const protectedResourceMetadataUrl = `${publicBaseUrl}${protectedResourceMetadataPath}`
+  const mcpResourceUrl = `${publicBaseUrl}${mcpPath}`
+  const mcpProtectedResourceMetadataPath = `${protectedResourceMetadataPath}${mcpPath}`
+  const mcpProtectedResourceMetadataUrl = `${publicBaseUrl}${mcpProtectedResourceMetadataPath}`
   const authorizationServerMetadataUrl = `${oauthIssuer}${authorizationServerMetadataPath}`
   const authorizationServerMetadataPaths = new Set([
     authorizationServerMetadataPath,
     `${authorizationServerMetadataPath}${mcpPath}`,
+  ])
+  const protectedResourceMetadataByPath = new Map<
+    string,
+    OAuthProtectedResourceMetadata
+  >([
+    [
+      protectedResourceMetadataPath,
+      {
+        resource: publicBaseUrl,
+        authorization_servers: [oauthIssuer],
+        scopes_supported: supportedScopes,
+        bearer_methods_supported: ['header'],
+      },
+    ],
+    [
+      mcpProtectedResourceMetadataPath,
+      {
+        resource: mcpResourceUrl,
+        authorization_servers: [oauthIssuer],
+        scopes_supported: supportedScopes,
+        bearer_methods_supported: ['header'],
+      },
+    ],
   ])
   const openaiAppsChallengeToken = options.openaiAppsChallengeToken?.trim()
   const sseSessions = new Map<string, SseSession>()
@@ -117,18 +144,16 @@ export async function startRemoteServer(
         }
       }
 
-      if (requestUrl.pathname === protectedResourceMetadataPath) {
+      const protectedResourceMetadata = protectedResourceMetadataByPath.get(
+        requestUrl.pathname,
+      )
+      if (protectedResourceMetadata) {
         if (req.method === 'OPTIONS') {
           writeOptionsResponse(res)
           return
         }
         if (req.method === 'GET') {
-          writeJsonResponse(res, {
-            resource: publicBaseUrl,
-            authorization_servers: [oauthIssuer],
-            scopes_supported: supportedScopes,
-            bearer_methods_supported: ['header'],
-          })
+          writeJsonResponse(res, protectedResourceMetadata)
           return
         }
       }
@@ -143,7 +168,7 @@ export async function startRemoteServer(
           req,
           res,
           authMode: options.authMode,
-          protectedResourceMetadataUrl,
+          protectedResourceMetadataUrl: mcpProtectedResourceMetadataUrl,
           resolveUpstreamToken,
           sessions: streamableSessions,
         })
@@ -279,6 +304,16 @@ async function handleStreamableHttpRequest({
     return
   }
 
+  const upstreamToken = getUpstreamToken(req.headers.authorization, authMode)
+  if (authMode === 'passthrough' && !upstreamToken) {
+    res
+      .writeHead(401, {
+        'WWW-Authenticate': `Bearer resource_metadata="${protectedResourceMetadataUrl}"`,
+      })
+      .end('Unauthorized')
+    return
+  }
+
   if (req.method !== 'POST') {
     writeJsonRpcError(res, 405, 'Method not allowed')
     return
@@ -298,20 +333,11 @@ async function handleStreamableHttpRequest({
   }
 
   if (!includesInitializeRequest(body)) {
-    writeJsonRpcError(res, 400, 'Bad Request: Missing or invalid initialize request')
-    return
-  }
-
-  const upstreamToken = getUpstreamToken(
-    req.headers.authorization,
-    authMode,
-  )
-  if (authMode === 'passthrough' && !upstreamToken) {
-    res
-      .writeHead(401, {
-        'WWW-Authenticate': `Bearer resource_metadata="${protectedResourceMetadataUrl}"`,
-      })
-      .end('Unauthorized')
+    writeJsonRpcError(
+      res,
+      400,
+      'Bad Request: Missing or invalid initialize request',
+    )
     return
   }
 
