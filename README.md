@@ -51,7 +51,7 @@ https://your-domain.example/mcp
 
 ChatGPT developer mode can add remote MCP servers that use SSE. For production ChatGPT apps or connectors, use `passthrough` auth or a deployment that authenticates each user separately before forwarding requests to Togello.
 
-Remote mode redirects OAuth authorization server metadata discovery paths at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-authorization-server/mcp` to the Togello OAuth issuer configured with `TOGELLO_OAUTH_ISSUER` or `TOGELLO_API_BASE_URL`.
+Remote mode serves OAuth authorization server metadata from `/.well-known/oauth-authorization-server` and `/.well-known/oauth-authorization-server/mcp` using the Togello OAuth issuer configured with `TOGELLO_OAUTH_ISSUER` or `TOGELLO_API_BASE_URL`.
 
 Remote OAuth clients that connect to `/mcp` should discover protected resource metadata at `/.well-known/oauth-protected-resource/mcp`. That metadata returns `resource` as the full MCP endpoint URL, such as `https://your-domain.example/mcp`. Unauthenticated `/mcp` requests include a `WWW-Authenticate` challenge whose `resource_metadata` value points to that `/mcp` metadata path.
 

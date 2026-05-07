@@ -40,6 +40,18 @@ type OAuthProtectedResourceMetadata = {
   bearer_methods_supported: string[]
 }
 
+type OAuthAuthorizationServerMetadata = {
+  issuer: string
+  authorization_endpoint: string
+  token_endpoint: string
+  registration_endpoint: string
+  scopes_supported: string[]
+  response_types_supported: string[]
+  grant_types_supported: string[]
+  code_challenge_methods_supported: string[]
+  token_endpoint_auth_methods_supported: string[]
+}
+
 const authorizationServerMetadataPath =
   '/.well-known/oauth-authorization-server'
 const authorizationServerMetadataCorsHeaders = {
@@ -73,7 +85,7 @@ export async function startRemoteServer(
   const mcpResourceUrl = `${publicBaseUrl}${mcpPath}`
   const mcpProtectedResourceMetadataPath = `${protectedResourceMetadataPath}${mcpPath}`
   const mcpProtectedResourceMetadataUrl = `${publicBaseUrl}${mcpProtectedResourceMetadataPath}`
-  const authorizationServerMetadataUrl = `${oauthIssuer}${authorizationServerMetadataPath}`
+  const authorizationServerMetadata = buildAuthorizationServerMetadata(oauthIssuer)
   const authorizationServerMetadataPaths = new Set([
     authorizationServerMetadataPath,
     `${authorizationServerMetadataPath}${mcpPath}`,
@@ -139,7 +151,7 @@ export async function startRemoteServer(
           return
         }
         if (req.method === 'GET') {
-          writeRedirectResponse(res, authorizationServerMetadataUrl)
+          writeJsonResponse(res, authorizationServerMetadata)
           return
         }
       }
@@ -396,9 +408,25 @@ function validatePathlessOAuthIssuer(oauthIssuer: string): void {
   }
 }
 
+function buildAuthorizationServerMetadata(
+  oauthIssuer: string,
+): OAuthAuthorizationServerMetadata {
+  return {
+    issuer: oauthIssuer,
+    authorization_endpoint: `${oauthIssuer}/oauth/authorize`,
+    token_endpoint: `${oauthIssuer}/oauth/token`,
+    registration_endpoint: `${oauthIssuer}/oauth/register`,
+    scopes_supported: supportedScopes,
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code', 'refresh_token'],
+    code_challenge_methods_supported: ['S256'],
+    token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
+  }
+}
+
 function writeJsonResponse(
   res: ServerResponse,
-  body: OAuthProtectedResourceMetadata,
+  body: OAuthProtectedResourceMetadata | OAuthAuthorizationServerMetadata,
 ): void {
   res.writeHead(200, {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -408,15 +436,6 @@ function writeJsonResponse(
     'Content-Type': 'application/json',
   })
   res.end(JSON.stringify(body))
-}
-
-function writeRedirectResponse(res: ServerResponse, location: string): void {
-  res.writeHead(302, {
-    ...authorizationServerMetadataCorsHeaders,
-    'Cache-Control': 'no-store',
-    Location: location,
-  })
-  res.end()
 }
 
 function writeAuthorizationServerMetadataOptionsResponse(
