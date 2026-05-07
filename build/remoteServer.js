@@ -33,7 +33,7 @@ export async function startRemoteServer(options) {
     const mcpResourceUrl = `${publicBaseUrl}${mcpPath}`;
     const mcpProtectedResourceMetadataPath = `${protectedResourceMetadataPath}${mcpPath}`;
     const mcpProtectedResourceMetadataUrl = `${publicBaseUrl}${mcpProtectedResourceMetadataPath}`;
-    const authorizationServerMetadataUrl = `${oauthIssuer}${authorizationServerMetadataPath}`;
+    const authorizationServerMetadata = buildAuthorizationServerMetadata(oauthIssuer);
     const authorizationServerMetadataPaths = new Set([
         authorizationServerMetadataPath,
         `${authorizationServerMetadataPath}${mcpPath}`,
@@ -87,7 +87,7 @@ export async function startRemoteServer(options) {
                     return;
                 }
                 if (req.method === 'GET') {
-                    writeRedirectResponse(res, authorizationServerMetadataUrl);
+                    writeJsonResponse(res, authorizationServerMetadata);
                     return;
                 }
             }
@@ -288,6 +288,19 @@ function validatePathlessOAuthIssuer(oauthIssuer) {
         throw new Error(`Remote OAuth issuer must not include a path: ${oauthIssuer}`);
     }
 }
+function buildAuthorizationServerMetadata(oauthIssuer) {
+    return {
+        issuer: oauthIssuer,
+        authorization_endpoint: `${oauthIssuer}/oauth/authorize`,
+        token_endpoint: `${oauthIssuer}/oauth/token`,
+        registration_endpoint: `${oauthIssuer}/oauth/register`,
+        scopes_supported: supportedScopes,
+        response_types_supported: ['code'],
+        grant_types_supported: ['authorization_code', 'refresh_token'],
+        code_challenge_methods_supported: ['S256'],
+        token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
+    };
+}
 function writeJsonResponse(res, body) {
     res.writeHead(200, {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -297,14 +310,6 @@ function writeJsonResponse(res, body) {
         'Content-Type': 'application/json',
     });
     res.end(JSON.stringify(body));
-}
-function writeRedirectResponse(res, location) {
-    res.writeHead(302, {
-        ...authorizationServerMetadataCorsHeaders,
-        'Cache-Control': 'no-store',
-        Location: location,
-    });
-    res.end();
 }
 function writeAuthorizationServerMetadataOptionsResponse(res) {
     res.writeHead(204, authorizationServerMetadataCorsHeaders);
