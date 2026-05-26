@@ -1,8 +1,9 @@
 import { httpClient } from '../../client.js';
 import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
-export const updateTaskHandler = async ({ todoUUID, isCompleted, status, scheduledStartDate, scheduledEndDate, url, detail, }) => {
+export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, status, scheduledStartDate, scheduledEndDate, url, detail, }) => {
     try {
-        if (isCompleted === undefined &&
+        if (taskName === undefined &&
+            isCompleted === undefined &&
             status === undefined &&
             scheduledStartDate === undefined &&
             scheduledEndDate === undefined &&
@@ -16,6 +17,7 @@ export const updateTaskHandler = async ({ todoUUID, isCompleted, status, schedul
         await httpClient.putJson({
             path: `/v2/integration/todo/${encodeURIComponent(todoUUID)}`,
             body: {
+                label: taskName,
                 isCompleted,
                 status,
                 scheduledStartDate,
@@ -26,6 +28,7 @@ export const updateTaskHandler = async ({ todoUUID, isCompleted, status, schedul
         });
         return jsonToolResponse({
             todoUUID,
+            taskName,
             isCompleted,
             status,
             updated: true,

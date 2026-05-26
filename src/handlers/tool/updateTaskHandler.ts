@@ -3,6 +3,7 @@ import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
 export type UpdateTaskHandlerArgs = {
   todoUUID: string
+  taskName?: string
   isCompleted?: boolean
   status?: 'TODO' | 'DOING' | 'DONE'
   scheduledStartDate?: string
@@ -12,6 +13,7 @@ export type UpdateTaskHandlerArgs = {
 }
 
 type UpdateTaskRequest = {
+  label?: string
   isCompleted?: boolean
   status?: 'TODO' | 'DOING' | 'DONE'
   scheduledStartDate?: string
@@ -22,6 +24,7 @@ type UpdateTaskRequest = {
 
 export const updateTaskHandler = async ({
   todoUUID,
+  taskName,
   isCompleted,
   status,
   scheduledStartDate,
@@ -31,6 +34,7 @@ export const updateTaskHandler = async ({
 }: UpdateTaskHandlerArgs) => {
   try {
     if (
+      taskName === undefined &&
       isCompleted === undefined &&
       status === undefined &&
       scheduledStartDate === undefined &&
@@ -48,6 +52,7 @@ export const updateTaskHandler = async ({
     await httpClient.putJson<null, UpdateTaskRequest>({
       path: `/v2/integration/todo/${encodeURIComponent(todoUUID)}`,
       body: {
+        label: taskName,
         isCompleted,
         status,
         scheduledStartDate,
@@ -58,6 +63,7 @@ export const updateTaskHandler = async ({
     })
     return jsonToolResponse({
       todoUUID,
+      taskName,
       isCompleted,
       status,
       updated: true,
