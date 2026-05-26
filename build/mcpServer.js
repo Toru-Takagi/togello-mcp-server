@@ -93,6 +93,10 @@ export function createMcpServer(options = {}) {
                 .string()
                 .uuid()
                 .describe('Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it.'),
+            taskName: z
+                .string()
+                .optional()
+                .describe('Optional task name. If omitted, the current task name is kept.'),
             isCompleted: z
                 .boolean()
                 .optional()
