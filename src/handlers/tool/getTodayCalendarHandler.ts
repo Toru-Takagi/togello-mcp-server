@@ -23,6 +23,7 @@ export const getTodayCalendarHandler = async () => {
         taskName: task.label,
         scheduledStartDate: task.scheduledStartDate,
         scheduledEndDate: task.scheduledEndDate,
+        deadlineDateTime: task.deadlineDateTime,
       })),
     })
   } catch (error) {
@@ -77,6 +78,7 @@ type TodoListResponse = {
   createdAt: string
   scheduledStartDate: string | null
   scheduledEndDate: string | null
+  deadlineDateTime: string | null
   url: string | null
   detail: string
   categoryUUID: string | null

@@ -5,9 +5,10 @@ export type UpdateTaskHandlerArgs = {
   todoUUID: string
   taskName?: string
   isCompleted?: boolean
-  status?: 'TODO' | 'DOING' | 'DONE'
+  status?: TodoStatus
   scheduledStartDate?: string
   scheduledEndDate?: string
+  deadlineDateTime?: string
   url?: string
   detail?: string
 }
@@ -15,12 +16,15 @@ export type UpdateTaskHandlerArgs = {
 type UpdateTaskRequest = {
   label?: string
   isCompleted?: boolean
-  status?: 'TODO' | 'DOING' | 'DONE'
+  status?: TodoStatus
   scheduledStartDate?: string
   scheduledEndDate?: string
+  deadlineDateTime?: string
   url?: string
   detail?: string
 }
+
+type TodoStatus = 'TODO' | 'PENDING' | 'DOING' | 'DONE'
 
 export const updateTaskHandler = async ({
   todoUUID,
@@ -29,6 +33,7 @@ export const updateTaskHandler = async ({
   status,
   scheduledStartDate,
   scheduledEndDate,
+  deadlineDateTime,
   url,
   detail,
 }: UpdateTaskHandlerArgs) => {
@@ -39,6 +44,7 @@ export const updateTaskHandler = async ({
       status === undefined &&
       scheduledStartDate === undefined &&
       scheduledEndDate === undefined &&
+      deadlineDateTime === undefined &&
       url === undefined &&
       detail === undefined
     ) {
@@ -57,6 +63,7 @@ export const updateTaskHandler = async ({
         status,
         scheduledStartDate,
         scheduledEndDate,
+        deadlineDateTime,
         url,
         detail,
       },
@@ -66,6 +73,7 @@ export const updateTaskHandler = async ({
       taskName,
       isCompleted,
       status,
+      deadlineDateTime,
       updated: true,
     })
   } catch (error) {
