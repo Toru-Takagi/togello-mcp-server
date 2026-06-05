@@ -1,4 +1,5 @@
 import { httpClient } from '../../client.js'
+import type { TodoStatus } from '../../types/todo.js'
 import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
 export type CreateTaskHandlerArgs = {
@@ -22,8 +23,6 @@ type CreateTaskRequest = {
   url?: string
   detail?: string
 }
-
-type TodoStatus = 'TODO' | 'PENDING' | 'DOING' | 'DONE'
 
 export const createTaskHandler = async ({
   taskName,
