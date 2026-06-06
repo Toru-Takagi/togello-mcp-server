@@ -19,6 +19,7 @@ export const getTodayCalendarHandler = async () => {
                 taskName: task.label,
                 scheduledStartDate: task.scheduledStartDate,
                 scheduledEndDate: task.scheduledEndDate,
+                deadlineDateTime: task.deadlineDateTime,
             })),
         });
     }

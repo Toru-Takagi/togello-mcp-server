@@ -17,6 +17,7 @@ export const getTodoListHandler = async ({ categoryUUIDs, }) => {
                 detail: todo.detail,
                 scheduledStartDate: todo.scheduledStartDate,
                 scheduledEndDate: todo.scheduledEndDate,
+                deadlineDateTime: todo.deadlineDateTime,
                 priorityNumber: todo.priorityNumber,
                 categoryUUID: todo.categoryUUID,
                 categoryLabel: todo.categoryLabel,

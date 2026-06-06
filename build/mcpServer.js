@@ -50,7 +50,7 @@ export function createMcpServer(options = {}) {
         },
     });
     server.registerTool('get-tasks-list', {
-        description: 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / status / detail / scheduled start date and time / scheduled end date and time / priority / category',
+        description: 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / status / detail / scheduled start date and time / scheduled end date and time / deadline date and time / priority / category',
         inputSchema: {
             categoryUUIDs: z
                 .array(z.string())
@@ -63,6 +63,10 @@ export function createMcpServer(options = {}) {
         description: 'Creates a new task in the TODO feature.',
         inputSchema: {
             taskName: z.string().describe('create task name'),
+            status: z
+                .enum(['TODO', 'PENDING', 'DOING', 'DONE'])
+                .optional()
+                .describe('Optional. Creates the task with the specified todo status.'),
             categoryUUID: z
                 .string()
                 .optional()
@@ -75,6 +79,10 @@ export function createMcpServer(options = {}) {
                 .string()
                 .optional()
                 .describe('Scheduled end date in ISO format.'),
+            deadlineDateTime: z
+                .string()
+                .optional()
+                .describe('Deadline date and time in ISO format.'),
             url: z
                 .string()
                 .optional()
@@ -102,9 +110,9 @@ export function createMcpServer(options = {}) {
                 .optional()
                 .describe('Optional. Backward-compatible completion update. true marks the task done. false preserves existing TODO or DOING tasks and reopens DONE tasks to TODO.'),
             status: z
-                .enum(['TODO', 'DOING', 'DONE'])
+                .enum(['TODO', 'PENDING', 'DOING', 'DONE'])
                 .optional()
-                .describe('Optional. Updates the todo status directly. Use this to switch tasks between TODO, DOING, and DONE.'),
+                .describe('Optional. Updates the todo status directly. Use this to switch tasks between TODO, PENDING, DOING, and DONE.'),
             scheduledStartDate: z
                 .string()
                 .optional()
@@ -113,6 +121,10 @@ export function createMcpServer(options = {}) {
                 .string()
                 .optional()
                 .describe('Scheduled end date in ISO format. If omitted, the current value is kept.'),
+            deadlineDateTime: z
+                .string()
+                .optional()
+                .describe('Deadline date and time in ISO format. If omitted, the current value is kept.'),
             url: z
                 .string()
                 .optional()

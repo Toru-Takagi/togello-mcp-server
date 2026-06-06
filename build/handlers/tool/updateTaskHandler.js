@@ -1,12 +1,13 @@
 import { httpClient } from '../../client.js';
 import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
-export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, status, scheduledStartDate, scheduledEndDate, url, detail, }) => {
+export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, status, scheduledStartDate, scheduledEndDate, deadlineDateTime, url, detail, }) => {
     try {
         if (taskName === undefined &&
             isCompleted === undefined &&
             status === undefined &&
             scheduledStartDate === undefined &&
             scheduledEndDate === undefined &&
+            deadlineDateTime === undefined &&
             url === undefined &&
             detail === undefined) {
             return errorToolResponse('At least one update field is required');
@@ -22,6 +23,7 @@ export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, statu
                 status,
                 scheduledStartDate,
                 scheduledEndDate,
+                deadlineDateTime,
                 url,
                 detail,
             },
@@ -31,6 +33,7 @@ export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, statu
             taskName,
             isCompleted,
             status,
+            deadlineDateTime,
             updated: true,
         });
     }
