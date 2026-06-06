@@ -48,6 +48,12 @@ const privateWriteToolAnnotations = {
   destructiveHint: false,
 }
 
+const privateOverwriteToolAnnotations = {
+  readOnlyHint: false,
+  openWorldHint: false,
+  destructiveHint: true,
+}
+
 function withUpstreamToken<TArgs extends Record<string, unknown>>(
   cb: ToolHandler<TArgs>,
   resolveUpstreamToken?: UpstreamTokenResolver,
@@ -207,7 +213,7 @@ export function createMcpServer(
             'Optional detail associated with the task. If omitted, the current value is kept.',
           ),
       },
-      annotations: privateWriteToolAnnotations,
+      annotations: privateOverwriteToolAnnotations,
     },
     withUpstreamToken(
       updateTaskHandler,
@@ -247,7 +253,7 @@ export function createMcpServer(
             'Memo content for the date. Pass an empty or whitespace-only string to clear the memo.',
           ),
       },
-      annotations: privateWriteToolAnnotations,
+      annotations: privateOverwriteToolAnnotations,
     },
     withUpstreamToken(
       updateCalendarDateMemoHandler,
@@ -342,7 +348,7 @@ export function createMcpServer(
             'You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.',
           ),
       },
-      annotations: privateWriteToolAnnotations,
+      annotations: privateOverwriteToolAnnotations,
     },
     withUpstreamToken(
       completeActivityLogHandler,
