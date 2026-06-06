@@ -27,6 +27,11 @@ const privateWriteToolAnnotations = {
     openWorldHint: false,
     destructiveHint: false,
 };
+const privateOverwriteToolAnnotations = {
+    readOnlyHint: false,
+    openWorldHint: false,
+    destructiveHint: true,
+};
 function withUpstreamToken(cb, resolveUpstreamToken, requireUpstreamToken = false) {
     return async (args, extra) => {
         const token = resolveUpstreamToken?.(extra.sessionId);
@@ -134,7 +139,7 @@ export function createMcpServer(options = {}) {
                 .optional()
                 .describe('Optional detail associated with the task. If omitted, the current value is kept.'),
         },
-        annotations: privateWriteToolAnnotations,
+        annotations: privateOverwriteToolAnnotations,
     }, withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-calendar-date-memo', {
         description: 'Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.',
@@ -151,7 +156,7 @@ export function createMcpServer(options = {}) {
                 .string()
                 .describe('Memo content for the date. Pass an empty or whitespace-only string to clear the memo.'),
         },
-        annotations: privateWriteToolAnnotations,
+        annotations: privateOverwriteToolAnnotations,
     }, withUpstreamToken(updateCalendarDateMemoHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-todo-category-list', {
         description: 'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID',
@@ -190,7 +195,7 @@ export function createMcpServer(options = {}) {
                 .uuid()
                 .describe('You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.'),
         },
-        annotations: privateWriteToolAnnotations,
+        annotations: privateOverwriteToolAnnotations,
     }, withUpstreamToken(completeActivityLogHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-japan-current-time', {
         description: 'Returns the current time in Japan (JST).',

@@ -61,7 +61,7 @@ For OpenAI Apps domain verification, set `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKE
 
 ## Tools
 
-Read-only tools include MCP `readOnlyHint` annotations and return stable JSON in both `structuredContent` and text content.
+All tools set MCP `readOnlyHint`, `openWorldHint`, and `destructiveHint` annotations explicitly. Read-only tools return stable JSON in both `structuredContent` and text content.
 
 - `get-tasks-list`: Retrieves incomplete TODO tasks. Optional `categoryUUIDs` filters by category UUID.
 - `get-calendar-date-memo`: Retrieves a calendar date memo for a `YYYY-MM-DD` date.
@@ -71,7 +71,7 @@ Read-only tools include MCP `readOnlyHint` annotations and return stable JSON in
 - `get-activity-log-list`: Retrieves activity logs.
 - `get-japan-current-time`: Returns the current time in Japan.
 
-Write tools return JSON. Failed tool responses also return JSON and are marked with `isError: true`.
+Write tools return JSON. Failed tool responses also return JSON and are marked with `isError: true`. Tools that can overwrite existing private Togello data set `destructiveHint: true`; create/start tools set `destructiveHint: false`.
 
 - `create-task`: Creates a TODO task.
 - `update-task`: Updates a TODO task.
