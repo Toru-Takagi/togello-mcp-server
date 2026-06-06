@@ -26,6 +26,7 @@ export const getTodoListHandler = async ({
         detail: todo.detail,
         scheduledStartDate: todo.scheduledStartDate,
         scheduledEndDate: todo.scheduledEndDate,
+        deadlineDateTime: todo.deadlineDateTime,
         priorityNumber: todo.priorityNumber,
         categoryUUID: todo.categoryUUID,
         categoryLabel: todo.categoryLabel,
@@ -45,12 +46,13 @@ type TodoListResponse = {
   todoSettingUUID: string | null
   label: string
   priorityNumber: number
-  status: 'TODO' | 'DOING' | 'DONE'
+  status: 'TODO' | 'PENDING' | 'DOING' | 'DONE'
   completedAt: string | null
   operatedAt: string
   createdAt: string
   scheduledStartDate: string | null
   scheduledEndDate: string | null
+  deadlineDateTime: string | null
   url: string | null
   detail: string
   categoryUUID: string | null

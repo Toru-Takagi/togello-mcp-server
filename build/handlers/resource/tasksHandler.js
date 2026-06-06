@@ -12,8 +12,10 @@ export const tasksHandler = async (uri, _options) => {
                     text: tasks
                         .map((todo) => JSON.stringify({
                         label: todo.label,
+                        status: todo.status,
                         scheduledStartDate: todo.scheduledStartDate,
                         scheduledEndDate: todo.scheduledEndDate,
+                        deadlineDateTime: todo.deadlineDateTime,
                         priorityNumber: todo.priorityNumber,
                     }))
                         .join(','),
