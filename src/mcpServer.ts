@@ -35,6 +35,7 @@ type ToolHandler<TArgs extends Record<string, unknown>> = (
 const calendarDateMemoDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD')
+const rfc3339DateTimeSchema = z.string().datetime({ offset: true })
 
 const readOnlyToolAnnotations = {
   readOnlyHint: true,
@@ -105,14 +106,12 @@ export function createMcpServer(
           .describe(
             'Filters tasks by completion state. Omit this to retrieve incomplete tasks by default. Use COMPLETED for completed tasks.',
           ),
-        completedStartDate: z
-          .string()
+        completedStartDate: rfc3339DateTimeSchema
           .optional()
           .describe(
             'Inclusive completed-at range start in RFC3339 format, for example yesterday at 00:00:00+09:00.',
           ),
-        completedEndDate: z
-          .string()
+        completedEndDate: rfc3339DateTimeSchema
           .optional()
           .describe(
             'Exclusive completed-at range end in RFC3339 format, for example today at 00:00:00+09:00 when retrieving yesterday.',
