@@ -63,7 +63,7 @@ For OpenAI Apps domain verification, set `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKE
 
 All tools set MCP `readOnlyHint`, `openWorldHint`, and `destructiveHint` annotations explicitly. Read-only tools return stable JSON in both `structuredContent` and text content.
 
-- `get-tasks-list`: Retrieves incomplete TODO tasks. Optional `categoryUUIDs` filters by category UUID.
+- `get-tasks-list`: Retrieves TODO tasks. By default it retrieves incomplete tasks. Optional `categoryUUIDs` filters by category UUID. Use `completionStatus: "COMPLETED"` with `completedStartDate` and `completedEndDate` in RFC3339 format to retrieve tasks completed during a period.
 - `get-calendar-date-memo`: Retrieves a calendar date memo for a `YYYY-MM-DD` date.
 - `get-todo-category-list`: Retrieves TODO categories.
 - `get-today-calendar`: Retrieves linked Google Calendar events and scheduled tasks.

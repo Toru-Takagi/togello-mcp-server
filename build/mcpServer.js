@@ -55,12 +55,24 @@ export function createMcpServer(options = {}) {
         },
     });
     server.registerTool('get-tasks-list', {
-        description: 'Retrieves incomplete tasks from the TODO feature. Recognizes task uuid / task name / status / detail / scheduled start date and time / scheduled end date and time / deadline date and time / priority / category',
+        description: 'Retrieves tasks from the TODO feature. By default it returns incomplete tasks. For tasks completed yesterday or during another period, set completionStatus to COMPLETED and pass completedStartDate and completedEndDate as RFC3339 date-times. Recognizes task uuid / task name / status / detail / completed date and time / scheduled start date and time / scheduled end date and time / deadline date and time / priority / category',
         inputSchema: {
             categoryUUIDs: z
                 .array(z.string())
                 .optional()
                 .describe('Filters tasks by specified category UUIDs.'),
+            completionStatus: z
+                .enum(['INCOMPLETE', 'COMPLETED'])
+                .optional()
+                .describe('Filters tasks by completion state. Omit this to retrieve incomplete tasks by default. Use COMPLETED for completed tasks.'),
+            completedStartDate: z
+                .string()
+                .optional()
+                .describe('Inclusive completed-at range start in RFC3339 format, for example yesterday at 00:00:00+09:00.'),
+            completedEndDate: z
+                .string()
+                .optional()
+                .describe('Exclusive completed-at range end in RFC3339 format, for example today at 00:00:00+09:00 when retrieving yesterday.'),
         },
         annotations: readOnlyToolAnnotations,
     }, withUpstreamToken(getTodoListHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
