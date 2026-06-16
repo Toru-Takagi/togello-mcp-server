@@ -15,6 +15,22 @@ export const getTodoListHandler = async ({
   completedEndDate,
 }: GetTodoListHandlerArgs) => {
   try {
+    const hasCompletedStartDate = completedStartDate !== undefined
+    const hasCompletedEndDate = completedEndDate !== undefined
+    if (hasCompletedStartDate !== hasCompletedEndDate) {
+      return errorToolResponse(
+        'completedStartDate and completedEndDate must be specified together',
+      )
+    }
+    if (
+      (hasCompletedStartDate || hasCompletedEndDate) &&
+      completionStatus !== 'COMPLETED'
+    ) {
+      return errorToolResponse(
+        'completionStatus must be COMPLETED when completed date filters are specified',
+      )
+    }
+
     const searchParams = new URLSearchParams()
     for (const categoryUUID of categoryUUIDs ?? []) {
       searchParams.append('categoryUUID', categoryUUID)
