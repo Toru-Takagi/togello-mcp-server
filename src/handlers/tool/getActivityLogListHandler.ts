@@ -1,12 +1,19 @@
 import { httpClient } from '../../client.js'
 import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
-export const getActivityLogListHandler = async () => {
+export type GetActivityLogListHandlerArgs = {
+  limit?: number
+}
+
+export const getActivityLogListHandler = async ({
+  limit,
+}: GetActivityLogListHandlerArgs) => {
   try {
+    const qs = limit !== undefined ? `?limit=${limit}` : ''
     const activityLogList = await httpClient.fetchURL<
       ActivityLogListResponse[]
     >({
-      path: '/v2/integration/activity-logs',
+      path: `/v2/integration/activity-logs${qs}`,
     })
 
     return jsonToolResponse({

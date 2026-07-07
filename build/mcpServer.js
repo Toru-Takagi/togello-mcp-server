@@ -186,7 +186,15 @@ export function createMcpServer(options = {}) {
     }, withUpstreamToken(getActivityItemListHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-activity-log-list', {
         description: 'Retrieves the list of activity logs from the integration feature. Since it is a record of what the person has done, if all the end dates are filled in, this person is not doing anything now. If there is one with a null end date, there should be at most one, and if there is one, it means that the person is doing it now. Recognizes activity log UUID / start date and time / end date and time / item name.',
-        inputSchema: {},
+        inputSchema: {
+            limit: z
+                .number()
+                .int()
+                .positive()
+                .max(300)
+                .optional()
+                .describe('Optional maximum number of activity logs to retrieve. Defaults to 300.'),
+        },
         annotations: readOnlyToolAnnotations,
     }, withUpstreamToken(getActivityLogListHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('start-activity-log', {
