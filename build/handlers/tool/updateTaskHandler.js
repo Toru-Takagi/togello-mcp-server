@@ -1,10 +1,11 @@
 import { httpClient } from '../../client.js';
 import { errorToolResponse, jsonToolResponse } from './toolResponse.js';
-export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, status, scheduledStartDate, scheduledEndDate, deadlineDateTime, url, detail, }) => {
+export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, status, categoryUUID, scheduledStartDate, scheduledEndDate, deadlineDateTime, url, detail, }) => {
     try {
         if (taskName === undefined &&
             isCompleted === undefined &&
             status === undefined &&
+            categoryUUID === undefined &&
             scheduledStartDate === undefined &&
             scheduledEndDate === undefined &&
             deadlineDateTime === undefined &&
@@ -21,6 +22,7 @@ export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, statu
                 label: taskName,
                 isCompleted,
                 status,
+                categoryUUID,
                 scheduledStartDate,
                 scheduledEndDate,
                 deadlineDateTime,
@@ -33,6 +35,7 @@ export const updateTaskHandler = async ({ todoUUID, taskName, isCompleted, statu
             taskName,
             isCompleted,
             status,
+            categoryUUID,
             deadlineDateTime,
             updated: true,
         });

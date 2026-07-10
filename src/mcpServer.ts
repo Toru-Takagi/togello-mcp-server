@@ -199,6 +199,14 @@ export function createMcpServer(
           .describe(
             'Optional. Updates the todo status directly. Use this to switch tasks between TODO, PENDING, DOING, and DONE.',
           ),
+        categoryUUID: z
+          .string()
+          .uuid()
+          .nullable()
+          .optional()
+          .describe(
+            'Optional category UUID associated with the task. Use get-todo-category-list to obtain a valid category UUID. Set to null to remove the current category. If omitted, the current value is kept.',
+          ),
         scheduledStartDate: z
           .string()
           .optional()
