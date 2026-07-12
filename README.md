@@ -74,7 +74,7 @@ All tools set MCP `readOnlyHint`, `openWorldHint`, and `destructiveHint` annotat
 Write tools return JSON. Failed tool responses also return JSON and are marked with `isError: true`. Tools that can overwrite existing private Togello data set `destructiveHint: true`; create/start tools set `destructiveHint: false`.
 
 - `create-task`: Creates a TODO task.
-- `update-task`: Updates a TODO task.
+- `update-task`: Updates a TODO task, including category assignment or removal.
 - `update-calendar-date-memo`: Updates or clears a calendar date memo.
 - `start-activity-log`: Starts an activity log.
 - `complete-activity-log`: Completes an activity log.
