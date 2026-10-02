@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { NodeStreamableHTTPServerTransport, toNodeHandler, toWebRequest, } from '@modelcontextprotocol/node';
+import { createMcpHandler, isInitializeRequest, isLegacyRequest, } from '@modelcontextprotocol/server';
+import { SSEServerTransport } from '@modelcontextprotocol/server-legacy/sse';
 import { parseBearerToken } from './bearerToken.js';
 import { createMcpServer } from './mcpServer.js';
 const authorizationServerMetadataPath = '/.well-known/oauth-authorization-server';
@@ -68,6 +68,13 @@ export async function startRemoteServer(options) {
         return (streamableSessions.get(sessionId)?.upstreamToken ??
             sseSessions.get(sessionId)?.upstreamToken);
     };
+    const modernHandler = createMcpHandler(({ requestInfo }) => createMcpServer({
+        resolveUpstreamToken: () => getUpstreamToken(requestInfo?.headers.get('authorization') ?? undefined, options.authMode),
+        requireUpstreamToken: options.authMode === 'passthrough',
+    }), { legacy: 'reject', maxRequestBodySize: maxRequestBodyBytes });
+    const handleModernRequest = toNodeHandler(modernHandler, {
+        maxRequestBodySize: maxRequestBodyBytes,
+    });
     const server = createServer(async (req, res) => {
         try {
             const requestUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
@@ -107,7 +114,35 @@ export async function startRemoteServer(options) {
                     writeMcpOptionsResponse(res);
                     return;
                 }
+                writeMcpCorsHeaders(res);
+                let body = null;
+                if (req.method === 'POST') {
+                    try {
+                        body = (await readJsonBody(req)) ?? null;
+                    }
+                    catch (error) {
+                        writeJsonRpcError(res, error instanceof RequestBodyTooLargeError ? 413 : 400, error instanceof RequestBodyTooLargeError
+                            ? 'Payload too large'
+                            : 'Bad Request: Invalid JSON body');
+                        return;
+                    }
+                }
+                const request = await toWebRequest(req, body);
+                if (!(await isLegacyRequest(request, body))) {
+                    const token = getUpstreamToken(req.headers.authorization, options.authMode);
+                    if (options.authMode === 'passthrough' && !token) {
+                        res
+                            .writeHead(401, {
+                            'WWW-Authenticate': `Bearer resource_metadata="${mcpProtectedResourceMetadataUrl}"`,
+                        })
+                            .end('Unauthorized');
+                        return;
+                    }
+                    await handleModernRequest(req, res, body);
+                    return;
+                }
                 await handleStreamableHttpRequest({
+                    body,
                     req,
                     res,
                     authMode: options.authMode,
@@ -193,18 +228,22 @@ export async function startRemoteServer(options) {
             res.end('Internal server error');
         }
     });
+    server.once('close', () => {
+        void modernHandler.close();
+    });
     await new Promise((resolve, reject) => {
         server.once('error', reject);
         server.listen(options.port, options.host, () => resolve());
     });
     console.log(`Remote MCP server listening on http://${options.host}:${options.port}${mcpPath}`);
+    return server;
 }
-async function handleStreamableHttpRequest({ req, res, authMode, protectedResourceMetadataUrl, resolveUpstreamToken, sessions, }) {
+async function handleStreamableHttpRequest({ body, req, res, authMode, protectedResourceMetadataUrl, resolveUpstreamToken, sessions, }) {
     writeMcpCorsHeaders(res);
     const sessionId = getHeaderValue(req.headers['mcp-session-id']);
     const existingSession = sessionId ? sessions.get(sessionId) : undefined;
     if (existingSession) {
-        await existingSession.transport.handleRequest(req, res);
+        await existingSession.transport.handleRequest(req, res, body);
         return;
     }
     if (sessionId) {
@@ -224,23 +263,11 @@ async function handleStreamableHttpRequest({ req, res, authMode, protectedResour
         writeJsonRpcError(res, 405, 'Method not allowed');
         return;
     }
-    let body;
-    try {
-        body = await readJsonBody(req);
-    }
-    catch (error) {
-        if (error instanceof RequestBodyTooLargeError) {
-            writeJsonRpcError(res, 413, 'Payload too large');
-            return;
-        }
-        writeJsonRpcError(res, 400, 'Bad Request: Invalid JSON body');
-        return;
-    }
     if (!includesInitializeRequest(body)) {
         writeJsonRpcError(res, 400, 'Bad Request: Missing or invalid initialize request');
         return;
     }
-    const transport = new StreamableHTTPServerTransport({
+    const transport = new NodeStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (initializedSessionId) => {
             sessions.set(initializedSessionId, {
@@ -333,7 +360,7 @@ function writeOptionsResponse(res) {
 }
 function writeMcpCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Mcp-Session-Id, mcp-session-id, Last-Event-ID, mcp-protocol-version');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Mcp-Session-Id, mcp-session-id, Last-Event-ID, mcp-protocol-version, Mcp-Method, Mcp-Name');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id, mcp-session-id, mcp-protocol-version');
 }
@@ -364,10 +391,11 @@ function getHeaderValue(header) {
 async function readJsonBody(req) {
     const chunks = [];
     let totalBytes = 0;
-    for await (const chunk of req) {
+    for await (const chunk of req.iterator({ destroyOnReturn: false })) {
         const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
         totalBytes += buffer.byteLength;
         if (totalBytes > maxRequestBodyBytes) {
+            req.resume();
             throw new RequestBodyTooLargeError();
         }
         chunks.push(buffer);

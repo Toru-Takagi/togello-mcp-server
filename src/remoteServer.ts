@@ -1,9 +1,17 @@
 import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
+import {
+  NodeStreamableHTTPServerTransport,
+  toNodeHandler,
+  toWebRequest,
+} from '@modelcontextprotocol/node'
+import {
+  createMcpHandler,
+  isInitializeRequest,
+  isLegacyRequest,
+} from '@modelcontextprotocol/server'
+import { SSEServerTransport } from '@modelcontextprotocol/server-legacy/sse'
 import { parseBearerToken } from './bearerToken.js'
 import { type UpstreamTokenResolver, createMcpServer } from './mcpServer.js'
 
@@ -28,7 +36,7 @@ type SseSession = {
 }
 
 type StreamableSession = {
-  transport: StreamableHTTPServerTransport
+  transport: NodeStreamableHTTPServerTransport
   upstreamToken?: string
   closeMcpServer: () => Promise<void>
 }
@@ -74,7 +82,7 @@ const supportedScopes = [
 
 export async function startRemoteServer(
   options: StartRemoteServerOptions,
-): Promise<void> {
+): Promise<ReturnType<typeof createServer>> {
   const mcpPath = options.mcpPath ?? '/mcp'
   const ssePath = options.ssePath ?? '/sse'
   const messagePath = options.messagePath ?? '/message'
@@ -85,7 +93,8 @@ export async function startRemoteServer(
   const mcpResourceUrl = `${publicBaseUrl}${mcpPath}`
   const mcpProtectedResourceMetadataPath = `${protectedResourceMetadataPath}${mcpPath}`
   const mcpProtectedResourceMetadataUrl = `${publicBaseUrl}${mcpProtectedResourceMetadataPath}`
-  const authorizationServerMetadata = buildAuthorizationServerMetadata(oauthIssuer)
+  const authorizationServerMetadata =
+    buildAuthorizationServerMetadata(oauthIssuer)
   const authorizationServerMetadataPaths = new Set([
     authorizationServerMetadataPath,
     `${authorizationServerMetadataPath}${mcpPath}`,
@@ -126,6 +135,22 @@ export async function startRemoteServer(
       sseSessions.get(sessionId)?.upstreamToken
     )
   }
+
+  const modernHandler = createMcpHandler(
+    ({ requestInfo }) =>
+      createMcpServer({
+        resolveUpstreamToken: () =>
+          getUpstreamToken(
+            requestInfo?.headers.get('authorization') ?? undefined,
+            options.authMode,
+          ),
+        requireUpstreamToken: options.authMode === 'passthrough',
+      }),
+    { legacy: 'reject', maxRequestBodySize: maxRequestBodyBytes },
+  )
+  const handleModernRequest = toNodeHandler(modernHandler, {
+    maxRequestBodySize: maxRequestBodyBytes,
+  })
 
   const server = createServer(async (req, res) => {
     try {
@@ -176,7 +201,42 @@ export async function startRemoteServer(
           return
         }
 
+        writeMcpCorsHeaders(res)
+        let body: unknown = null
+        if (req.method === 'POST') {
+          try {
+            body = (await readJsonBody(req)) ?? null
+          } catch (error) {
+            writeJsonRpcError(
+              res,
+              error instanceof RequestBodyTooLargeError ? 413 : 400,
+              error instanceof RequestBodyTooLargeError
+                ? 'Payload too large'
+                : 'Bad Request: Invalid JSON body',
+            )
+            return
+          }
+        }
+        const request = await toWebRequest(req, body)
+        if (!(await isLegacyRequest(request, body))) {
+          const token = getUpstreamToken(
+            req.headers.authorization,
+            options.authMode,
+          )
+          if (options.authMode === 'passthrough' && !token) {
+            res
+              .writeHead(401, {
+                'WWW-Authenticate': `Bearer resource_metadata="${mcpProtectedResourceMetadataUrl}"`,
+              })
+              .end('Unauthorized')
+            return
+          }
+          await handleModernRequest(req, res, body)
+          return
+        }
+
         await handleStreamableHttpRequest({
+          body,
           req,
           res,
           authMode: options.authMode,
@@ -275,6 +335,10 @@ export async function startRemoteServer(
     }
   })
 
+  server.once('close', () => {
+    void modernHandler.close()
+  })
+
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
     server.listen(options.port, options.host, () => resolve())
@@ -283,9 +347,11 @@ export async function startRemoteServer(
   console.log(
     `Remote MCP server listening on http://${options.host}:${options.port}${mcpPath}`,
   )
+  return server
 }
 
 type HandleStreamableHttpRequestOptions = {
+  body: unknown
   req: IncomingMessage
   res: ServerResponse
   authMode: RemoteAuthMode
@@ -295,6 +361,7 @@ type HandleStreamableHttpRequestOptions = {
 }
 
 async function handleStreamableHttpRequest({
+  body,
   req,
   res,
   authMode,
@@ -307,7 +374,7 @@ async function handleStreamableHttpRequest({
   const sessionId = getHeaderValue(req.headers['mcp-session-id'])
   const existingSession = sessionId ? sessions.get(sessionId) : undefined
   if (existingSession) {
-    await existingSession.transport.handleRequest(req, res)
+    await existingSession.transport.handleRequest(req, res, body)
     return
   }
 
@@ -331,19 +398,6 @@ async function handleStreamableHttpRequest({
     return
   }
 
-  let body: unknown
-  try {
-    body = await readJsonBody(req)
-  } catch (error) {
-    if (error instanceof RequestBodyTooLargeError) {
-      writeJsonRpcError(res, 413, 'Payload too large')
-      return
-    }
-
-    writeJsonRpcError(res, 400, 'Bad Request: Invalid JSON body')
-    return
-  }
-
   if (!includesInitializeRequest(body)) {
     writeJsonRpcError(
       res,
@@ -353,7 +407,7 @@ async function handleStreamableHttpRequest({
     return
   }
 
-  const transport = new StreamableHTTPServerTransport({
+  const transport = new NodeStreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: (initializedSessionId) => {
       sessions.set(initializedSessionId, {
@@ -467,7 +521,7 @@ function writeMcpCorsHeaders(res: ServerResponse): void {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, Mcp-Session-Id, mcp-session-id, Last-Event-ID, mcp-protocol-version',
+    'Content-Type, Authorization, Mcp-Session-Id, mcp-session-id, Last-Event-ID, mcp-protocol-version, Mcp-Method, Mcp-Name',
   )
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
   res.setHeader(
@@ -514,10 +568,11 @@ function getHeaderValue(
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []
   let totalBytes = 0
-  for await (const chunk of req) {
+  for await (const chunk of req.iterator({ destroyOnReturn: false })) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     totalBytes += buffer.byteLength
     if (totalBytes > maxRequestBodyBytes) {
+      req.resume()
       throw new RequestBodyTooLargeError()
     }
     chunks.push(buffer)

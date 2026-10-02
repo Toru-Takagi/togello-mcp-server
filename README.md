@@ -9,6 +9,14 @@ https://togello.com/sign
 - Node.js 22 or later
 - A Togello API token
 
+## Protocol compatibility
+
+The server uses MCP TypeScript SDK v2. Stdio and `/mcp` support the MCP `2026-07-28` protocol and legacy clients using the `initialize` handshake. The `/mcp` endpoint retains sessions for legacy clients; modern requests are stateless. `/sse` and `/message` remain available for legacy clients.
+
+Modern remote requests must each include an `Authorization: Bearer ...` header. Their credentials are isolated per request, including when a legacy session ID is supplied. Legacy connections retain the token provided when their session was created. The existing OAuth metadata URLs and authentication modes are unchanged.
+
+MCP Events are not implemented.
+
 ## Local MCP With npm
 
 Use this for desktop clients and local developer tools that launch MCP servers over stdio.
@@ -45,7 +53,7 @@ Connect remote MCP clients to:
 https://your-domain.example/mcp
 ```
 
-`passthrough` auth expects each remote client request to send its own Togello API token as an `Authorization: Bearer ...` header. Use this mode for published remote MCP servers.
+`passthrough` auth uses the connecting user's Togello API token from the `Authorization: Bearer ...` header. Modern requests require this header on every request; legacy sessions retain the connection's token. Use this mode for published remote MCP servers.
 
 `env` auth uses one server-side `TOGELLO_API_TOKEN` for every remote client. It is intended only for trusted local or single-user deployments. When binding to a non-local host, `TOGELLO_MCP_AUTH_MODE=env` also requires `TOGELLO_MCP_ALLOW_ENV_AUTH=true` so public deployments cannot enable shared-token auth by accident.
 
@@ -82,9 +90,13 @@ Write tools return JSON. Failed tool responses also return JSON and are marked w
 ## Development
 
 ```bash
-npm install
-npm run build
+npm ci
+npm test
 ```
+
+The protocol tests exercise SDK v2 modern clients and SDK v1.29.0 legacy clients over stdio, Streamable HTTP, and legacy SSE against a local mock API. They verify the 12 existing tool contracts, read/write results, request credential isolation, protocol header errors, body limits, metadata, and legacy session lifecycle. `test/fixtures/v1-tools.json` records `tools/list` from server 1.0.42 at commit `558c2c2fda81f7c8b20f443afa1bf5e554a72dad`; comparisons allow the SDK's JSON Schema dialect and wire-format changes.
+
+SDK-facing schemas use Zod 4. UUID fields retain the prior permissive UUID syntax, and date-time fields retain their previous Zod 3 validation through the compatibility export included in the Zod package.
 
 ## MCP Review
 

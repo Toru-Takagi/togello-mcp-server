@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createMcpServer } from './mcpServer.js';
 import { startRemoteServer } from './remoteServer.js';
 async function main() {
@@ -47,8 +47,7 @@ async function main() {
     if (mode !== 'stdio') {
         throw new Error(`Unknown mode: ${mode}`);
     }
-    const server = createMcpServer();
-    await server.connect(new StdioServerTransport());
+    serveStdio(() => createMcpServer());
 }
 main().catch((error) => {
     console.error('Fatal error in main():', error);

@@ -1,0 +1,363 @@
+{
+  "tools": [
+    {
+      "name": "get-tasks-list",
+      "description": "Retrieves tasks from the TODO feature. By default it returns incomplete tasks. For tasks completed yesterday or during another period, set completionStatus to COMPLETED and pass completedStartDate and completedEndDate as RFC3339 date-times. Recognizes task uuid / task name / status / detail / completed date and time / scheduled start date and time / scheduled end date and time / deadline date and time / priority / category",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "categoryUUIDs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filters tasks by specified category UUIDs."
+          },
+          "completionStatus": {
+            "type": "string",
+            "enum": ["INCOMPLETE", "COMPLETED"],
+            "description": "Filters tasks by completion state. Omit this to retrieve incomplete tasks by default. Use COMPLETED for completed tasks."
+          },
+          "completedStartDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Inclusive completed-at range start in RFC3339 format, for example yesterday at 00:00:00+09:00."
+          },
+          "completedEndDate": {
+            "$ref": "#/properties/completedStartDate",
+            "description": "Exclusive completed-at range end in RFC3339 format, for example today at 00:00:00+09:00 when retrieving yesterday."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "create-task",
+      "description": "Creates a new task in the TODO feature.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskName": {
+            "type": "string",
+            "description": "create task name"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["TODO", "PENDING", "DOING", "DONE"],
+            "description": "Optional. Creates the task with the specified todo status."
+          },
+          "categoryUUID": {
+            "type": "string",
+            "description": "category UUID. category UUID of get-todo-category-list"
+          },
+          "scheduledStartDate": {
+            "type": "string",
+            "description": "Scheduled start date in ISO format."
+          },
+          "scheduledEndDate": {
+            "type": "string",
+            "description": "Scheduled end date in ISO format."
+          },
+          "deadlineDateTime": {
+            "type": "string",
+            "description": "Deadline date and time in ISO format."
+          },
+          "url": {
+            "type": "string",
+            "description": "Optional URL associated with the task."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Optional detail associated with the task."
+          }
+        },
+        "required": ["taskName"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "update-task",
+      "description": "Updates a task in the TODO feature.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "todoUUID": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it."
+          },
+          "taskName": {
+            "type": "string",
+            "description": "Optional task name. If omitted, the current task name is kept."
+          },
+          "isCompleted": {
+            "type": "boolean",
+            "description": "Optional. Backward-compatible completion update. true marks the task done. false preserves existing TODO or DOING tasks and reopens DONE tasks to TODO."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["TODO", "PENDING", "DOING", "DONE"],
+            "description": "Optional. Updates the todo status directly. Use this to switch tasks between TODO, PENDING, DOING, and DONE."
+          },
+          "categoryUUID": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional category UUID associated with the task. Use get-todo-category-list to obtain a valid category UUID. Set to null to remove the current category. If omitted, the current value is kept."
+          },
+          "scheduledStartDate": {
+            "type": "string",
+            "description": "Scheduled start date in ISO format. If omitted, the current value is kept."
+          },
+          "scheduledEndDate": {
+            "type": "string",
+            "description": "Scheduled end date in ISO format. If omitted, the current value is kept."
+          },
+          "deadlineDateTime": {
+            "type": "string",
+            "description": "Deadline date and time in ISO format. If omitted, the current value is kept."
+          },
+          "url": {
+            "type": "string",
+            "description": "Optional URL associated with the task. If omitted, the current value is kept."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Optional detail associated with the task. If omitted, the current value is kept."
+          }
+        },
+        "required": ["todoUUID"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get-calendar-date-memo",
+      "description": "Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Target date in YYYY-MM-DD format."
+          }
+        },
+        "required": ["date"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "update-calendar-date-memo",
+      "description": "Updates a calendar date memo for the specified date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Target date in YYYY-MM-DD format."
+          },
+          "memo": {
+            "type": "string",
+            "description": "Memo content for the date. Pass an empty or whitespace-only string to clear the memo."
+          }
+        },
+        "required": ["date", "memo"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get-todo-category-list",
+      "description": "Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get-today-calendar",
+      "description": "Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get-activity-item-list",
+      "description": "Retrieves the list of activity items from the integration feature. Recognizes activity item UUID / item name",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get-activity-log-list",
+      "description": "Retrieves the list of activity logs from the integration feature. Since it is a record of what the person has done, if all the end dates are filled in, this person is not doing anything now. If there is one with a null end date, there should be at most one, and if there is one, it means that the person is doing it now. Recognizes activity log UUID / start date and time / end date and time / item name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 300,
+            "description": "Optional maximum number of activity logs to retrieve. Defaults to 300."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "start-activity-log",
+      "description": "Starts an activity log.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "activityItemName": {
+            "type": "string",
+            "description": "You must specify a valid itemName obtained from get-activity-item-list. This tool requires a pre-existing activity item."
+          }
+        },
+        "required": ["activityItemName"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "complete-activity-log",
+      "description": "Completes an activity log.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "activityLogUUID": {
+            "type": "string",
+            "format": "uuid",
+            "description": "You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log."
+          }
+        },
+        "required": ["activityLogUUID"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get-japan-current-time",
+      "description": "Returns the current time in Japan (JST).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ]
+}

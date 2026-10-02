@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { serveStdio } from '@modelcontextprotocol/server/stdio'
 import { createMcpServer } from './mcpServer.js'
 import { type RemoteAuthMode, startRemoteServer } from './remoteServer.js'
 
@@ -68,8 +68,7 @@ async function main() {
     throw new Error(`Unknown mode: ${mode}`)
   }
 
-  const server = createMcpServer()
-  await server.connect(new StdioServerTransport())
+  serveStdio(() => createMcpServer())
 }
 
 main().catch((error) => {
@@ -111,7 +110,9 @@ function getRemoteOAuthIssuer(): string {
     return assertAbsoluteHttpUrl('TOGELLO_API_BASE_URL', apiBaseUrl)
   }
   if (getEnvValue('ENV') === 'production') {
-    throw new Error('TOGELLO_OAUTH_ISSUER or TOGELLO_API_BASE_URL is required in production')
+    throw new Error(
+      'TOGELLO_OAUTH_ISSUER or TOGELLO_API_BASE_URL is required in production',
+    )
   }
   return 'http://localhost:8000'
 }
