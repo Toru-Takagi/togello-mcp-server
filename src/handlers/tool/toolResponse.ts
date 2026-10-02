@@ -1,4 +1,4 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { CallToolResult } from '@modelcontextprotocol/server'
 
 export function jsonToolResponse<T extends Record<string, unknown>>(
   structuredContent: T,

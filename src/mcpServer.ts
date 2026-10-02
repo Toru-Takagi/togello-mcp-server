@@ -1,6 +1,7 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import { McpServer } from '@modelcontextprotocol/server'
+import type { CallToolResult } from '@modelcontextprotocol/server'
 import { z } from 'zod'
+import { z as legacyZod } from 'zod/v3'
 import { completeActivityLogHandler } from './handlers/tool/completeActivityLogHandler.js'
 import { createTaskHandler } from './handlers/tool/createTaskHandler.js'
 import { getActivityItemListHandler } from './handlers/tool/getActivityItemListHandler.js'
@@ -35,7 +36,11 @@ type ToolHandler<TArgs extends Record<string, unknown>> = (
 const calendarDateMemoDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD')
-const rfc3339DateTimeSchema = z.string().datetime({ offset: true })
+const legacyDateTimeSchema = legacyZod.string().datetime({ offset: true })
+const rfc3339DateTimeSchema = z
+  .string()
+  .refine((value) => legacyDateTimeSchema.safeParse(value).success)
+  .meta({ format: 'date-time' })
 
 const readOnlyToolAnnotations = {
   readOnlyHint: true,
@@ -95,7 +100,7 @@ export function createMcpServer(
     {
       description:
         'Retrieves tasks from the TODO feature. By default it returns incomplete tasks. For tasks completed yesterday or during another period, set completionStatus to COMPLETED and pass completedStartDate and completedEndDate as RFC3339 date-times. Recognizes task uuid / task name / status / detail / completed date and time / scheduled start date and time / scheduled end date and time / deadline date and time / priority / category',
-      inputSchema: {
+      inputSchema: z.object({
         categoryUUIDs: z
           .array(z.string())
           .optional()
@@ -116,7 +121,7 @@ export function createMcpServer(
           .describe(
             'Exclusive completed-at range end in RFC3339 format, for example today at 00:00:00+09:00 when retrieving yesterday.',
           ),
-      },
+      }),
       annotations: readOnlyToolAnnotations,
     },
     withUpstreamToken(
@@ -129,7 +134,7 @@ export function createMcpServer(
     'create-task',
     {
       description: 'Creates a new task in the TODO feature.',
-      inputSchema: {
+      inputSchema: z.object({
         taskName: z.string().describe('create task name'),
         status: z
           .enum(['TODO', 'PENDING', 'DOING', 'DONE'])
@@ -161,7 +166,7 @@ export function createMcpServer(
           .string()
           .optional()
           .describe('Optional detail associated with the task.'),
-      },
+      }),
       annotations: privateWriteToolAnnotations,
     },
     withUpstreamToken(
@@ -174,10 +179,9 @@ export function createMcpServer(
     'update-task',
     {
       description: 'Updates a task in the TODO feature.',
-      inputSchema: {
+      inputSchema: z.object({
         todoUUID: z
-          .string()
-          .uuid()
+          .guid()
           .describe(
             'Task UUID. Please specify the task uuid (todo uuid) obtained from get-tasks-list. You cannot use this tool without specifying it.',
           ),
@@ -200,8 +204,7 @@ export function createMcpServer(
             'Optional. Updates the todo status directly. Use this to switch tasks between TODO, PENDING, DOING, and DONE.',
           ),
         categoryUUID: z
-          .string()
-          .uuid()
+          .guid()
           .nullable()
           .optional()
           .describe(
@@ -237,7 +240,7 @@ export function createMcpServer(
           .describe(
             'Optional detail associated with the task. If omitted, the current value is kept.',
           ),
-      },
+      }),
       annotations: privateOverwriteToolAnnotations,
     },
     withUpstreamToken(
@@ -251,11 +254,11 @@ export function createMcpServer(
     {
       description:
         'Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.',
-      inputSchema: {
+      inputSchema: z.object({
         date: calendarDateMemoDateSchema.describe(
           'Target date in YYYY-MM-DD format.',
         ),
-      },
+      }),
       annotations: readOnlyToolAnnotations,
     },
     withUpstreamToken(
@@ -268,7 +271,7 @@ export function createMcpServer(
     'update-calendar-date-memo',
     {
       description: 'Updates a calendar date memo for the specified date.',
-      inputSchema: {
+      inputSchema: z.object({
         date: calendarDateMemoDateSchema.describe(
           'Target date in YYYY-MM-DD format.',
         ),
@@ -277,7 +280,7 @@ export function createMcpServer(
           .describe(
             'Memo content for the date. Pass an empty or whitespace-only string to clear the memo.',
           ),
-      },
+      }),
       annotations: privateOverwriteToolAnnotations,
     },
     withUpstreamToken(
@@ -291,7 +294,7 @@ export function createMcpServer(
     {
       description:
         'Retrieves the list of categories from the TODO feature. Recognizes category name / category UUID',
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: readOnlyToolAnnotations,
     },
     withUpstreamToken(
@@ -305,7 +308,7 @@ export function createMcpServer(
     {
       description:
         'Retrieves scheduled events for yesterday/today/tomorrow from the linked Google Calendar. Recognizes event name / start date and time / end date and time. ',
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: readOnlyToolAnnotations,
     },
     withUpstreamToken(
@@ -319,7 +322,7 @@ export function createMcpServer(
     {
       description:
         'Retrieves the list of activity items from the integration feature. Recognizes activity item UUID / item name',
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: readOnlyToolAnnotations,
     },
     withUpstreamToken(
@@ -333,7 +336,7 @@ export function createMcpServer(
     {
       description:
         'Retrieves the list of activity logs from the integration feature. Since it is a record of what the person has done, if all the end dates are filled in, this person is not doing anything now. If there is one with a null end date, there should be at most one, and if there is one, it means that the person is doing it now. Recognizes activity log UUID / start date and time / end date and time / item name.',
-      inputSchema: {
+      inputSchema: z.object({
         limit: z
           .number()
           .int()
@@ -343,7 +346,7 @@ export function createMcpServer(
           .describe(
             'Optional maximum number of activity logs to retrieve. Defaults to 300.',
           ),
-      },
+      }),
       annotations: readOnlyToolAnnotations,
     },
     withUpstreamToken(
@@ -356,13 +359,13 @@ export function createMcpServer(
     'start-activity-log',
     {
       description: 'Starts an activity log.',
-      inputSchema: {
+      inputSchema: z.object({
         activityItemName: z
           .string()
           .describe(
             'You must specify a valid itemName obtained from get-activity-item-list. This tool requires a pre-existing activity item.',
           ),
-      },
+      }),
       annotations: privateWriteToolAnnotations,
     },
     withUpstreamToken(
@@ -375,14 +378,13 @@ export function createMcpServer(
     'complete-activity-log',
     {
       description: 'Completes an activity log.',
-      inputSchema: {
+      inputSchema: z.object({
         activityLogUUID: z
-          .string()
-          .uuid()
+          .guid()
           .describe(
             'You must specify a valid activityLogUUID obtained from get-activity-log-list. This tool requires an existing activity log.',
           ),
-      },
+      }),
       annotations: privateOverwriteToolAnnotations,
     },
     withUpstreamToken(
@@ -395,7 +397,7 @@ export function createMcpServer(
     'get-japan-current-time',
     {
       description: 'Returns the current time in Japan (JST).',
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: readOnlyToolAnnotations,
     },
     withUpstreamToken(
