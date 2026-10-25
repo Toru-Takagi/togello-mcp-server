@@ -1,0 +1,24 @@
+{
+  "name": "delete-task",
+  "description": "Permanently deletes a single task from the TODO feature. Use only when the user requests deletion or removal. Specify the todoUUID obtained from get-tasks-list; clarify the target if ambiguous. To complete a task, use update-task with status DONE. To find completed tasks, call get-tasks-list with completionStatus COMPLETED. Repeated deletion succeeds when no task owned by the caller matches; success does not confirm that a task previously existed.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "todoUUID": {
+        "type": "string",
+        "format": "uuid",
+        "description": "Task UUID obtained from get-tasks-list."
+      }
+    },
+    "required": [
+      "todoUUID"
+    ],
+    "additionalProperties": false
+  },
+  "annotations": {
+    "readOnlyHint": false,
+    "openWorldHint": false,
+    "destructiveHint": true,
+    "idempotentHint": true
+  }
+}

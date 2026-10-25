@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { z as legacyZod } from 'zod/v3';
 import { completeActivityLogHandler } from './handlers/tool/completeActivityLogHandler.js';
 import { createTaskHandler } from './handlers/tool/createTaskHandler.js';
+import { deleteTaskHandler } from './handlers/tool/deleteTaskHandler.js';
 import { getActivityItemListHandler } from './handlers/tool/getActivityItemListHandler.js';
 import { getActivityLogListHandler } from './handlers/tool/getActivityLogListHandler.js';
 import { getCalendarDateMemoHandler } from './handlers/tool/getCalendarDateMemoHandler.js';
@@ -161,6 +162,16 @@ export function createMcpServer(options = {}) {
         }),
         annotations: privateOverwriteToolAnnotations,
     }, withUpstreamToken(updateTaskHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
+    server.registerTool('delete-task', {
+        description: 'Permanently deletes a single task from the TODO feature. Use only when the user requests deletion or removal. Specify the todoUUID obtained from get-tasks-list; clarify the target if ambiguous. To complete a task, use update-task with status DONE. To find completed tasks, call get-tasks-list with completionStatus COMPLETED. Repeated deletion succeeds when no task owned by the caller matches; success does not confirm that a task previously existed.',
+        inputSchema: z.strictObject({
+            todoUUID: z.guid().describe('Task UUID obtained from get-tasks-list.'),
+        }),
+        annotations: {
+            ...privateOverwriteToolAnnotations,
+            idempotentHint: true,
+        },
+    }, withUpstreamToken(deleteTaskHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
     server.registerTool('get-calendar-date-memo', {
         description: 'Retrieves a calendar date memo for the specified date. Recognizes target date and memo content.',
         inputSchema: z.object({

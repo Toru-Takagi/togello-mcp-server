@@ -17,6 +17,11 @@ import { StreamableHTTPClientTransport as LegacyHttpTransport } from 'mcp-sdk-v1
 const baseline = JSON.parse(
   await readFile(new URL('./fixtures/v1-tools.json', import.meta.url), 'utf8'),
 )
+const deleteTool = JSON.parse(
+  await readFile(new URL('./fixtures/delete-task.json', import.meta.url), 'utf8'),
+)
+const expectedTools = [...baseline.tools]
+expectedTools.splice(3, 0, deleteTool)
 const identity = { name: 'togello-protocol-test', version: '1.0.0' }
 const modernOptions = { versionNegotiation: { mode: { pin: '2026-07-28' } } }
 
@@ -139,6 +144,21 @@ test(
       else process.env.TOGELLO_API_TOKEN = originalToken
     })
 
+    const todoUUID = '11111111-1111-4111-8111-111111111111'
+    const assertDeletion = async (client, token) => {
+      const result = await client.callTool({
+        name: 'delete-task',
+        arguments: { todoUUID },
+      })
+      assert.notEqual(result.isError, true)
+      assert.deepEqual(resultData(result), { todoUUID, deleted: true })
+      assert.deepEqual(requests.at(-1), {
+        method: 'DELETE',
+        path: `/v2/integration/todo/${todoUUID}`,
+        token: `Bearer ${token}`,
+        body: null,
+      })
+    }
     const captured = []
     const connectModern = async (token, extraHeaders = {}) => {
       const client = new Client(identity, modernOptions)
@@ -174,15 +194,16 @@ test(
     await legacy.connect(legacyTransport)
 
     await t.test(
-      'modern HTTP and SDK v1 HTTP expose all 12 existing tool contracts',
+      'modern HTTP and SDK v1 HTTP preserve existing tool contracts and expose delete-task',
       async () => {
         assert.equal(typeof legacyTransport.sessionId, 'string')
         for (const client of [modern, legacy]) {
           const tools = await client.listTools()
           assert.deepEqual(
             tools.tools.map(toolContract),
-            baseline.tools.map(toolContract),
+            expectedTools.map(toolContract),
           )
+          await assertDeletion(client, client === modern ? 'token-A' : 'legacy-token')
           const read = await client.callTool({
             name: 'get-todo-category-list',
             arguments: {},
@@ -211,6 +232,11 @@ test(
         const other = await connectModern('token-B', {
           'Mcp-Session-Id': legacyTransport.sessionId,
         })
+        const deleteResults = await Promise.all([modern, other].map((client) => client.callTool({
+          name: 'delete-task', arguments: { todoUUID },
+        })))
+        for (const result of deleteResults) assert.equal(resultData(result).deleted, true)
+        assert.deepEqual(requests.slice(-2).map((request) => request.token).sort(), ['Bearer token-A', 'Bearer token-B'])
         const [a, b] = await Promise.all(
           [modern, other].map((client) =>
             client.callTool({ name: 'get-todo-category-list', arguments: {} }),
@@ -305,6 +331,12 @@ test(
             assert.equal(result.isError, true)
             assert.equal(requests.length, before)
           }
+          for (const arguments_ of [{}, { todoUUID: 'invalid' }, { todoUUID: null }, { todoUUID, taskName: 'extra' }]) {
+            const before = requests.length
+            const result = await client.callTool({ name: 'delete-task', arguments: arguments_ })
+            assert.equal(result.isError, true)
+            assert.equal(requests.length, before)
+          }
           const invalid = await client.callTool({
             name: 'update-task',
             arguments: { todoUUID: 'invalid' },
@@ -341,6 +373,9 @@ test(
           assert.notEqual(completed.isError, true)
         }
         const invalidClient = await connectModern('invalid-token')
+        const deletionFailure = await invalidClient.callTool({ name: 'delete-task', arguments: { todoUUID } })
+        assert.equal(deletionFailure.isError, true)
+        assert.deepEqual(resultData(deletionFailure), { error: { message: 'Error deleting task' } })
         const failure = await invalidClient.callTool({
           name: 'create-task',
           arguments: { taskName: 'rejected' },
@@ -371,7 +406,7 @@ test(
           )
           assert.deepEqual(
             (await client.listTools()).tools.map(toolContract),
-            baseline.tools.map(toolContract),
+            expectedTools.map(toolContract),
           )
           const read = await client.callTool({
             name: 'get-todo-category-list',
@@ -386,6 +421,7 @@ test(
             arguments: { taskName: 'stdio task' },
           })
           assert.equal(resultData(write).created, true)
+          await assertDeletion(client, 'stdio-token')
           await client.close()
         }
       },
@@ -411,7 +447,7 @@ test(
         )
         assert.deepEqual(
           (await client.listTools()).tools.map(toolContract),
-          baseline.tools.map(toolContract),
+          expectedTools.map(toolContract),
         )
         const read = await client.callTool({
           name: 'get-todo-category-list',
@@ -423,6 +459,7 @@ test(
           arguments: { taskName: 'SSE task' },
         })
         assert.equal(resultData(write).created, true)
+        await assertDeletion(client, 'sse-token')
         await client.close()
       },
     )
@@ -545,7 +582,7 @@ test(
             },
           }),
         )
-        assert.equal((await next.listTools()).tools.length, 12)
+        assert.equal((await next.listTools()).tools.length, expectedTools.length)
       },
     )
   },

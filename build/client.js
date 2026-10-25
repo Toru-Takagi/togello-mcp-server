@@ -8,6 +8,19 @@ function getApiTokenOrThrow() {
     return token;
 }
 export const httpClient = {
+    delete: async ({ path }) => {
+        const token = getApiTokenOrThrow();
+        const response = await fetch(`${API_BASE_URL}${path}`, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) {
+            throw new Error(`response status: ${response.status}`);
+        }
+        await response.arrayBuffer();
+    },
     fetchURL: async ({ path }) => {
         const token = getApiTokenOrThrow();
         const url = `${API_BASE_URL}${path}`;

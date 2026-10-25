@@ -15,6 +15,7 @@ type HttpClient = {
   fetchURL: <T>(props: FetchServerProps) => Promise<T>
   postJson: <T, U>(props: PostServerProps<U>) => Promise<T>
   putJson: <T, U>(props: PostServerProps<U>) => Promise<T>
+  delete: (props: FetchServerProps) => Promise<void>
 }
 
 function getApiTokenOrThrow(): string {
@@ -28,6 +29,19 @@ function getApiTokenOrThrow(): string {
 }
 
 export const httpClient: HttpClient = {
+  delete: async ({ path }: FetchServerProps): Promise<void> => {
+    const token = getApiTokenOrThrow()
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      throw new Error(`response status: ${response.status}`)
+    }
+    await response.arrayBuffer()
+  },
   fetchURL: async <T>({ path }: FetchServerProps): Promise<T> => {
     const token = getApiTokenOrThrow()
 
