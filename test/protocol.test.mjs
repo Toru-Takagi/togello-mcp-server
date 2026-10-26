@@ -20,8 +20,12 @@ const baseline = JSON.parse(
 const deleteTool = JSON.parse(
   await readFile(new URL('./fixtures/delete-task.json', import.meta.url), 'utf8'),
 )
+const activeGathersTool = JSON.parse(
+  await readFile(new URL('./fixtures/active-gathers.json', import.meta.url), 'utf8'),
+)
 const expectedTools = [...baseline.tools]
 expectedTools.splice(3, 0, deleteTool)
+expectedTools.push(activeGathersTool)
 const identity = { name: 'togello-protocol-test', version: '1.0.0' }
 const modernOptions = { versionNegotiation: { mode: { pin: '2026-07-28' } } }
 
@@ -104,6 +108,13 @@ test(
             { categoryUUID: null, label: req.headers.authorization },
           ]),
         )
+      } else if (req.url === '/v2/gathers') {
+        res.end(JSON.stringify([{
+          gatherUUID: '22222222-2222-4222-8222-222222222222',
+          title: req.headers.authorization, mode: 'ADJUSTMENT',
+          adjustmentEndDateTime: '2099-01-01T00:00:00Z',
+          confirmedStartDateTime: null, detail: 'private details',
+        }]))
       } else if (req.method === 'GET') {
         res.end('[]')
       } else {
@@ -145,6 +156,15 @@ test(
     })
 
     const todoUUID = '11111111-1111-4111-8111-111111111111'
+    const assertActiveGathers = async (client, token) => {
+      const result = await client.callTool({ name: 'get-active-gathers', arguments: {} })
+      assert.notEqual(result.isError, true)
+      const { gathers } = resultData(result)
+      assert.equal(gathers.length, 1)
+      assert.equal(gathers[0].title, `Bearer ${token}`)
+      assert.equal('detail' in gathers[0], false)
+      assert.ok(requests.some((request) => request.path === '/v2/gathers' && request.token === `Bearer ${token}`))
+    }
     const assertDeletion = async (client, token) => {
       const result = await client.callTool({
         name: 'delete-task',
@@ -204,6 +224,7 @@ test(
             expectedTools.map(toolContract),
           )
           await assertDeletion(client, client === modern ? 'token-A' : 'legacy-token')
+          await assertActiveGathers(client, client === modern ? 'token-A' : 'legacy-token')
           const read = await client.callTool({
             name: 'get-todo-category-list',
             arguments: {},
@@ -285,6 +306,11 @@ test(
         )
       },
     )
+
+    await Promise.all([
+      assertActiveGathers(modern, 'token-A'),
+      assertActiveGathers(legacy, 'legacy-token'),
+    ])
 
     await t.test(
       'modern protocol errors cannot fall back to a legacy session',
@@ -422,6 +448,7 @@ test(
           })
           assert.equal(resultData(write).created, true)
           await assertDeletion(client, 'stdio-token')
+          await assertActiveGathers(client, 'stdio-token')
           await client.close()
         }
       },
@@ -460,6 +487,7 @@ test(
         })
         assert.equal(resultData(write).created, true)
         await assertDeletion(client, 'sse-token')
+        await assertActiveGathers(client, 'sse-token')
         await client.close()
       },
     )
