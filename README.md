@@ -6,7 +6,7 @@ https://togello.com/sign
 
 ## Requirements
 
-- Node.js 22 or later
+- Node.js 24.22.1 or later
 - A Togello API token
 
 ## Protocol compatibility
@@ -96,7 +96,7 @@ npm ci
 npm test
 ```
 
-The protocol tests exercise SDK v2 modern clients and SDK v1.29.0 legacy clients over stdio, Streamable HTTP, and legacy SSE against a local mock API. They verify the 12 existing tool contracts and the added deletion and active scheduling poll tools, read/write/delete results, request credential isolation, protocol header errors, body limits, metadata, and legacy session lifecycle. `test/fixtures/v1-tools.json` records `tools/list` from server 1.0.42 at commit `558c2c2fda81f7c8b20f443afa1bf5e554a72dad`; comparisons allow the SDK's JSON Schema dialect and wire-format changes.
+The protocol tests exercise SDK v2 modern clients and SDK v1.32.2 legacy clients over stdio, Streamable HTTP, and legacy SSE against a local mock API. They verify the 12 existing tool contracts and the added deletion and active scheduling poll tools, read/write/delete results, request credential isolation, protocol header errors, body limits, metadata, and legacy session lifecycle. `test/fixtures/v1-tools.json` records `tools/list` from server 1.0.42 at commit `558c2c2fda81f7c8b20f443afa1bf5e554a72dad`; comparisons allow the SDK's JSON Schema dialect and wire-format changes.
 
 SDK-facing schemas use Zod 4. UUID fields retain the prior permissive UUID syntax, and date-time fields retain their previous Zod 3 validation through the compatibility export included in the Zod package.
 
