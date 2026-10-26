@@ -1,0 +1,14 @@
+{
+  "name": "get-active-gathers",
+  "description": "Retrieves active scheduling polls created or previously viewed by the authenticated user. Unconfirmed polls remain active until the adjustment end time; confirmed events and recruitments remain active until their start time, inclusive. Events that have already started are excluded.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false,
+    "destructiveHint": false
+  }
+}
