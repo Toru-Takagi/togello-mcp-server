@@ -157,7 +157,7 @@ test(
 
     const todoUUID = '11111111-1111-4111-8111-111111111111'
     const assertActiveGathers = async (client, token) => {
-      const result = await client.callTool({ name: 'get-active-gathers', arguments: {} })
+      const result = await client.callTool({ name: 'list-active-scheduling-polls', arguments: {} })
       assert.notEqual(result.isError, true)
       const { gathers } = resultData(result)
       assert.equal(gathers.length, 1)

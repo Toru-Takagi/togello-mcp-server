@@ -77,8 +77,10 @@ All tools set MCP `readOnlyHint`, `openWorldHint`, and `destructiveHint` annotat
 - `get-today-calendar`: Retrieves linked Google Calendar events and scheduled tasks.
 - `get-activity-item-list`: Retrieves enabled activity items.
 - `get-activity-log-list`: Retrieves activity logs.
-- `get-active-gathers`: Retrieves active scheduling polls created or previously viewed by the authenticated user, using `GET /v2/gathers`. Takes no arguments. Unconfirmed polls are active through their adjustment end time; confirmed events and recruitments are active through their start time, inclusive. Already-started events are excluded even if they have not ended. Missing or invalid eligibility dates are excluded. Results retain API ordering and contain only UUID, title, mode, adjustment and confirmed timestamps, participant counts, and relationship type. Returns `{ "gathers": [] }` when none qualify; API failures are errors.
+- `list-active-scheduling-polls`: Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user, using `GET /v2/gathers`. Takes no arguments. Unconfirmed polls are active through their adjustment end time; confirmed events and recruitments are active through their start time, inclusive. Already-started events are excluded even if they have not ended. Missing or invalid eligibility dates are excluded. Results retain API ordering and contain only UUID, title, mode, adjustment and confirmed timestamps, participant counts, and relationship type. Returns `{ "gathers": [] }` when none qualify; API failures are errors.
 - `get-japan-current-time`: Returns the current time in Japan.
+
+The former tool ID `get-active-gathers` has been replaced by `list-active-scheduling-polls`; clients that store the old ID must update it. No compatibility alias is provided.
 
 Write tools return JSON. Failed tool responses also return JSON and are marked with `isError: true`. Tools that can overwrite existing private Togello data set `destructiveHint: true`; create/start tools set `destructiveHint: false`.
 
