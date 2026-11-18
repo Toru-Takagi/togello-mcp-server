@@ -41,6 +41,7 @@ async function main() {
             oauthIssuer,
             sseKeepAliveMs: keepAliveMs,
             openaiAppsChallengeToken,
+            museChallengeToken: process.env.TOGELLO_MCP_MUSE_CHALLENGE_TOKEN,
         });
         return;
     }
