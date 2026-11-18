@@ -67,6 +67,36 @@ The configured OAuth issuer must be an origin URL without a path component.
 
 For OpenAI Apps domain verification, set `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` to the verification token. Remote mode then serves it from `/.well-known/openai-apps-challenge` as `text/plain`. If both `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` and `OPENAI_APPS_CHALLENGE_TOKEN` are set, the Togello-scoped variable takes precedence.
 
+### Muse host verification (provisional)
+
+Remote mode supports an independent opt-in `TOGELLO_MCP_MUSE_CHALLENGE_TOKEN`.
+Unset or empty disables the route. A configured token must contain 1–256 ASCII
+letters, digits, underscores or hyphens; whitespace, dots, slashes, percent escapes
+and other characters are rejected at startup without logging the value. Values
+are never trimmed or decoded. There is no fallback to the OpenAI Apps token.
+
+With the explicit dummy token `dummy-muse-token`, only
+`GET /.well-known/muse-challenge/dummy-muse-token` returns HTTP 200,
+`Content-Type: text/plain; charset=utf-8`, `Cache-Control: no-store` and exactly
+`muse-challenge=dummy-muse-token` (no newline). It requires no authentication and
+performs no redirect or upstream/file lookup. Other tokens, query strings,
+encoded or normalized path variants, and other methods receive 404. Existing
+OpenAI Apps verification, OAuth metadata and MCP authentication remain independent.
+
+The [official connector guidelines](https://platform.muse.ai/docs) describe the
+submission process. The exact challenge path and body above follow an
+[applicant's first-hand report](https://reviewtimes.fyi/muse#how-review-works),
+not a confirmed official wire specification. Before enabling this setting,
+compare the actual submission UI's issued URL, token and required body with this
+provisional contract. If the format differs or the token fails validation, leave
+it disabled and update the implementation; do not weaken validation or guess a
+value. No real challenge has been issued or verified by this implementation.
+
+The MCP handler does not log challenge values or request paths. Reverse proxies,
+CDNs and hosting access logs are outside this handler's control; ensure their
+logging policy also protects the token before enabling verification. Remove the
+setting after verification or expiration and restart the server.
+
 ## Tools
 
 All tools set MCP `readOnlyHint`, `openWorldHint`, and `destructiveHint` annotations explicitly. Read-only tools return stable JSON in both `structuredContent` and text content.

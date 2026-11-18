@@ -13,6 +13,7 @@ const authorizationServerMetadataCorsHeaders = {
 };
 const protectedResourceMetadataPath = '/.well-known/oauth-protected-resource';
 const openaiAppsChallengePath = '/.well-known/openai-apps-challenge';
+const museChallengePrefix = '/.well-known/muse-challenge/';
 const maxRequestBodyBytes = 1_000_000;
 const supportedScopes = [
     'offline_access',
@@ -23,6 +24,15 @@ const supportedScopes = [
     'calendar:read',
 ];
 export async function startRemoteServer(options) {
+    const museChallengeToken = options.museChallengeToken;
+    if (museChallengeToken !== undefined &&
+        museChallengeToken !== '' &&
+        !/^[A-Za-z0-9_-]{1,256}$/.test(museChallengeToken)) {
+        throw new Error('Invalid TOGELLO_MCP_MUSE_CHALLENGE_TOKEN');
+    }
+    const museChallengePath = museChallengeToken
+        ? `${museChallengePrefix}${museChallengeToken}`
+        : undefined;
     const mcpPath = options.mcpPath ?? '/mcp';
     const ssePath = options.ssePath ?? '/sse';
     const messagePath = options.messagePath ?? '/message';
@@ -77,6 +87,15 @@ export async function startRemoteServer(options) {
     });
     const server = createServer(async (req, res) => {
         try {
+            if (req.url?.startsWith(museChallengePrefix)) {
+                if (req.method === 'GET' && req.url === museChallengePath) {
+                    writeTextResponse(res, `muse-challenge=${museChallengeToken}`);
+                }
+                else {
+                    res.writeHead(404).end('Not found');
+                }
+                return;
+            }
             const requestUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
             if (requestUrl.pathname === openaiAppsChallengePath) {
                 if (req.method === 'OPTIONS') {
@@ -220,8 +239,8 @@ export async function startRemoteServer(options) {
             }
             res.writeHead(404).end('Not found');
         }
-        catch (error) {
-            console.error('Remote server error:', error);
+        catch {
+            console.error('Remote server error');
             if (!res.headersSent) {
                 res.writeHead(500);
             }
