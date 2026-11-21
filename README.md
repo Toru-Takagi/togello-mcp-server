@@ -123,10 +123,20 @@ Write tools return JSON. Failed tool responses also return JSON and are marked w
 
 ## Development
 
+With [mise](https://mise.jdx.dev/) installed, trust this repository's configuration once:
+
 ```bash
-npm ci
-npm test
+mise trust
 ```
+
+Then build or run the tests:
+
+```bash
+mise run build
+mise run test
+```
+
+These tasks install the Node.js version pinned in `mise.toml` and run `npm ci --include=dev` before building. TypeScript's `tsc` comes from the project's development dependencies; no global TypeScript installation is needed, including when `NODE_ENV=production` is set.
 
 The protocol tests exercise SDK v2 modern clients and SDK v1.32.2 legacy clients over stdio, Streamable HTTP, and legacy SSE against a local mock API. They verify the 12 existing tool contracts and the added deletion and active scheduling poll tools, read/write/delete results, request credential isolation, protocol header errors, body limits, metadata, and legacy session lifecycle. `test/fixtures/v1-tools.json` records `tools/list` from server 1.0.42 at commit `558c2c2fda81f7c8b20f443afa1bf5e554a72dad`; comparisons allow the SDK's JSON Schema dialect and wire-format changes.
 
@@ -139,8 +149,18 @@ https://mcpreview.com/mcp-servers/toru-takagi/togello-mcp-server
 
 ## Publish
 
+After running `mise trust` once, authenticate with an npm account that can publish this package:
+
 ```bash
-npm run build
-npm version patch
-npm publish --access public
+mise exec -- npm login
 ```
+
+Choose an unused npm version and release it with one command (replace `1.0.46` with your release version):
+
+```bash
+mise run release 1.0.46
+```
+
+The release task installs Node.js and all locked dependencies, builds the server, runs the local tests, updates `package.json` and `package-lock.json` to the specified version, and publishes with `--access public`. A failed step stops the release before subsequent steps run. npm may prompt for authentication or a one-time password.
+
+The task does not create a Git commit or tag. Version changes and generated `build/` files remain in the working tree for review and commit. If publishing fails, the version change remains; after resolving the failure, rerun the same command with the same version. If that version is already published, choose a new version: npm does not allow overwriting a published version.

@@ -1,0 +1,25 @@
+[tools]
+node = "24.22.1"
+
+[tasks.install]
+description = "Install locked dependencies, including TypeScript"
+run = "npm ci --include=dev"
+
+[tasks.build]
+description = "Install dependencies and build the server"
+depends = ["install"]
+run = "npm run build"
+
+[tasks.test]
+description = "Install dependencies, build, and run the local protocol tests"
+depends = ["install"]
+run = "npm test"
+
+[tasks.release]
+description = "Test and publish the specified version to npm"
+usage = 'arg "<version>" help="Version to publish, for example 1.0.46"'
+depends = ["test"]
+run = [
+  'npm version "$usage_version" --no-git-tag-version --allow-same-version',
+  "npm publish --access public",
+]
