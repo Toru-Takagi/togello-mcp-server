@@ -241,8 +241,8 @@ export function createMcpServer(options = {}) {
         inputSchema: z.object({}),
         annotations: readOnlyToolAnnotations,
     }, withUpstreamToken(getJapanCurrentTimeHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
-    server.registerTool('get-active-gathers', {
-        description: 'Retrieves active scheduling polls created or previously viewed by the authenticated user. Unconfirmed polls remain active until the adjustment end time; confirmed events and recruitments remain active until their start time, inclusive. Events that have already started are excluded.',
+    server.registerTool('list-active-scheduling-polls', {
+        description: 'Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user. Unconfirmed polls remain active until the adjustment end time; confirmed events and recruitments remain active until their start time, inclusive. Events that have already started are excluded.',
         inputSchema: z.strictObject({}),
         annotations: readOnlyToolAnnotations,
     }, withUpstreamToken(getActiveGathersHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
