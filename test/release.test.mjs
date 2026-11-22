@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -24,14 +25,33 @@ function mockNpm() {
   writeFileSync(stateFile, JSON.stringify(state))
 
   if (command === 'view') {
-    if (args.includes('versions'))
+    if (args.includes('versions')) {
+      if (state.viewListError) {
+        console.log(JSON.stringify({ error: { code: state.viewListError } }))
+        process.exit(1)
+      }
       console.log(JSON.stringify(Object.keys(state.published)))
-    else {
+    } else {
       const version = subject.split('@').at(-1)
+      if (state.verifyError || state.visibilityMisses > 0) {
+        const code = state.verifyError ?? 'E404'
+        if (!state.verifyError) {
+          state.visibilityMisses--
+          writeFileSync(stateFile, JSON.stringify(state))
+        }
+        console.log(JSON.stringify({ error: { code } }))
+        process.exit(1)
+      }
       console.log(
         JSON.stringify({ version, gitHead: state.published[version] }),
       )
     }
+  } else if (
+    command === 'config' &&
+    subject === 'get' &&
+    args[0] === 'dry-run'
+  ) {
+    console.log(state.dryRun ? 'true' : 'false')
   } else if (command === 'version') {
     for (const path of ['package.json', 'package-lock.json']) {
       const data = JSON.parse(readFileSync(path, 'utf8'))
@@ -176,6 +196,56 @@ test('a failed npm publication leaves an unpublished version ready for an exact 
   assert.equal(retry.status, 0, retry.stderr)
   assert.equal(git('rev-parse', 'origin/main'), commit)
   assert.equal(state().published['1.0.53'], commit)
+})
+
+test('a successful npm publish waits for a temporarily missing version before pushing', (t) => {
+  const { git, state, setState, release } = setup(t)
+  setState({ ...state(), visibilityMisses: 1 })
+
+  const result = release()
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(
+    result.stdout,
+    /Waiting for npm to make togello-mcp-server@1\.0\.51 visible/,
+  )
+  assert.equal(state().calls.filter((call) => call === 'publish').length, 1)
+  assert.equal(git('rev-parse', 'origin/main'), state().published['1.0.51'])
+})
+
+test('an accepted publish is not repeated when the registry version list still lags on retry', (t) => {
+  const { cwd, git, state, setState, release } = setup(t)
+  setState({ ...state(), verifyError: 'E503' })
+  const first = release()
+  assert.equal(first.status, 1)
+  assert.match(first.stderr, /E503/)
+  assert.doesNotMatch(first.stdout, /Waiting for npm/)
+  const commit = git('rev-parse', 'HEAD')
+  const receipt = join(cwd, '.git', `togello-published-${commit}`)
+  assert.ok(existsSync(receipt))
+  assert.notEqual(git('rev-parse', 'origin/main'), commit)
+
+  setState({
+    ...state(),
+    verifyError: undefined,
+    viewListError: 'E404',
+    visibilityMisses: 1,
+  })
+  const retry = release('1.0.51')
+  assert.equal(retry.status, 0, retry.stderr)
+  assert.equal(state().calls.filter((call) => call === 'publish').length, 1)
+  assert.equal(git('rev-parse', 'origin/main'), commit)
+  assert.ok(!existsSync(receipt))
+})
+
+test('npm dry-run stops before committing or recording a publication', (t) => {
+  const { git, state, setState, release } = setup(t)
+  setState({ ...state(), dryRun: true })
+
+  const result = release()
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /Disable npm dry-run before releasing/)
+  assert.equal(git('rev-parse', 'HEAD'), git('rev-parse', 'origin/main'))
+  assert.equal(state().calls.includes('publish'), false)
 })
 
 test('a published version with a different gitHead cannot push a pending release', (t) => {

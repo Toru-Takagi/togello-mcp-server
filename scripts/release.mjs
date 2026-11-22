@@ -6,9 +6,11 @@ import {
   readFileSync,
   rmSync,
   rmdirSync,
+  writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { setTimeout } from 'node:timers/promises'
 import { isDeepStrictEqual } from 'node:util'
 
 const manifests = ['package.json', 'package-lock.json']
@@ -128,7 +130,7 @@ function checkWorkingTree(committed) {
   return { ...local, clean: changes.length === 0 }
 }
 
-function publishCommit(commit) {
+function publishCommit(commit, receipt) {
   const snapshot = mkdtempSync(join(tmpdir(), 'togello-publish-'))
   try {
     run(
@@ -153,6 +155,7 @@ function publishCommit(commit) {
       commit,
     )
     run('npm', 'publish', snapshot, '--access', 'public', '--ignore-scripts')
+    writeFileSync(receipt, '')
   } finally {
     rmSync(snapshot, { recursive: true, force: true })
   }
@@ -173,25 +176,47 @@ function checkReleaseCommit(parent, commit, previous, current) {
   )
 }
 
-function verifyPublishedCommit(name, version, commit) {
-  const published = JSON.parse(
-    output(
-      'npm',
-      'view',
-      `${name}@${version}`,
-      'version',
-      'gitHead',
-      '--json',
-      '--prefer-online',
-    ),
+function publishedCommitIsVisible(spec, version, commit) {
+  const result = spawnSync(
+    'npm',
+    ['view', spec, 'version', 'gitHead', '--json', '--prefer-online'],
+    {
+      encoding: 'utf8',
+      timeout: 15_000,
+    },
+  )
+  if (result.error) throw result.error
+  const published = result.stdout.trim() ? JSON.parse(result.stdout) : null
+  if (result.status !== 0 && published?.error?.code === 'E404') return false
+  requireCondition(
+    result.status === 0,
+    `npm could not check ${spec}${published?.error?.code ? ` (${published.error.code})` : ''}.`,
   )
   requireCondition(
-    published.version === version && published.gitHead === commit,
-    `npm ${name}@${version} does not identify release commit ${commit}.`,
+    published?.version === version && published.gitHead === commit,
+    `npm ${spec} does not identify release commit ${commit}.`,
+  )
+  return true
+}
+
+async function verifyPublishedCommit(name, version, commit) {
+  const spec = `${name}@${version}`
+  if (publishedCommitIsVisible(spec, version, commit)) return
+
+  console.log(`Waiting for npm to make ${spec} visible.`)
+  const retryDelays = [
+    1000, 2000, 4000, 8000, 15000, 30000, 30000, 30000, 30000, 30000,
+  ]
+  for (const delay of retryDelays) {
+    await setTimeout(delay)
+    if (publishedCommitIsVisible(spec, version, commit)) return
+  }
+  throw new Error(
+    `npm ${spec} is still not visible. Keep release commit ${commit} and rerun mise run release ${version}.`,
   )
 }
 
-function release(requested) {
+async function release(requested) {
   const origin = checkOrigin()
   const remote = remoteMain(origin)
   let commit = output('git', 'rev-parse', 'HEAD')
@@ -213,11 +238,16 @@ function release(requested) {
     )
   }
 
-  const versions = [
-    JSON.parse(
-      output('npm', 'view', name, 'versions', '--json', '--prefer-online'),
-    ),
-  ].flat()
+  let receipt = `.git/togello-published-${commit}`
+  const accepted =
+    (pending || requested === committed.version) && existsSync(receipt)
+  const versions = accepted
+    ? []
+    : [
+        JSON.parse(
+          output('npm', 'view', name, 'versions', '--json', '--prefer-online'),
+        ),
+      ].flat()
   const highest = versions
     .filter((version) => stableVersion.test(version))
     .sort(compareVersions)
@@ -246,16 +276,19 @@ function release(requested) {
     `Release version: ${target}. If interrupted, rerun mise run release ${target}.`,
   )
 
-  if (versions.includes(target)) {
+  if (accepted || versions.includes(target)) {
     requireCondition(
       local.clean && committed.version === target,
       `npm version ${target} is already published. Choose a newer version.`,
     )
-    verifyPublishedCommit(name, target, commit)
   } else {
     requireCondition(
       !highest || compareVersions(target, highest) > 0,
       `npm already has a newer version (${highest}).`,
+    )
+    requireCondition(
+      output('npm', 'config', 'get', 'dry-run') === 'false',
+      'Disable npm dry-run before releasing.',
     )
     run('npm', 'ci', '--include=dev')
     run('npm', 'test')
@@ -316,9 +349,10 @@ function release(requested) {
       'Local or remote main moved before npm publication.',
     )
     checkOrigin(origin)
-    publishCommit(commit)
-    verifyPublishedCommit(name, target, commit)
+    receipt = `.git/togello-published-${commit}`
+    publishCommit(commit, receipt)
   }
+  await verifyPublishedCommit(name, target, commit)
 
   const currentRemote = remoteMain(origin)
   if (currentRemote !== commit) {
@@ -333,6 +367,7 @@ function release(requested) {
     remoteMain(origin) === commit,
     `Could not confirm release commit ${commit} on origin/main.`,
   )
+  rmSync(receipt, { force: true })
   console.log(`Released ${name}@${target} from ${commit} on origin/main.`)
 }
 
@@ -356,7 +391,7 @@ try {
     )
   }
   try {
-    release(requested)
+    await release(requested)
   } finally {
     rmdirSync(lockDirectory)
   }
