@@ -151,18 +151,18 @@ https://mcpreview.com/mcp-servers/toru-takagi/togello-mcp-server
 
 ## Publish
 
-After running `mise trust` once, authenticate with an npm account that can publish this package:
+After running `mise trust` once, run this command from an interactive terminal to increment the version in the local `package.json` and publish it:
 
 ```bash
-mise exec -- npm login
+mise run patch
 ```
 
-Choose an unused npm version and release it with one command (replace `1.0.46` with your release version):
+You can also specify an exact unpublished version:
 
 ```bash
 mise run release 1.0.46
 ```
 
-The release task installs Node.js and all locked dependencies, builds the server, runs the local tests, updates `package.json` and `package-lock.json` to the specified version, and publishes with `--access public`. A failed step stops the release before subsequent steps run. npm may prompt for authentication or a one-time password.
+The release task installs the dependencies, builds the server, and runs the tests. It then checks the current npm login with `npm whoami`. If that check fails, it runs `npm login` and checks again. Complete the browser sign-in with an npm account that can publish this package. Once npm confirms the login, the task updates `package.json` and `package-lock.json` and publishes with `--access public`. npm may request two-factor authentication during publishing.
 
-The task does not create a Git commit or tag. Version changes and generated `build/` files remain in the working tree for review and commit. If publishing fails, the version change remains; after resolving the failure, rerun the same command with the same version. If that version is already published, choose a new version: npm does not allow overwriting a published version.
+The task does not create a Git commit or tag. Version changes and generated `build/` files remain in the working tree for review and commit. If publishing fails after the version changes, fix the failure and retry with `mise run release <version>`, using the exact version now in `package.json`. Running `mise run patch` again increments it again. If that version is already published, choose a new version.
