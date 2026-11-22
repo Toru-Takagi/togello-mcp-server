@@ -18,6 +18,12 @@ type HttpClient = {
   delete: (props: FetchServerProps) => Promise<void>
 }
 
+export class HttpStatusError extends Error {
+  constructor(public readonly status: number) {
+    super(`response status: ${status}`)
+  }
+}
+
 function getApiTokenOrThrow(): string {
   const token = getUpstreamToken() ?? process.env.TOGELLO_API_TOKEN
   if (!token) {
@@ -54,7 +60,7 @@ export const httpClient: HttpClient = {
       },
     })
     if (!response.ok) {
-      throw new Error(`response status: ${response.status}`)
+      throw new HttpStatusError(response.status)
     }
 
     return (await response.json()) as T
