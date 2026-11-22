@@ -72,6 +72,7 @@ function toolContract(tool) {
     description: tool.description,
     inputSchema: normalizeSchema(tool.inputSchema),
     annotations: tool.annotations,
+    _meta: tool._meta,
   }
 }
 
@@ -109,6 +110,10 @@ test(
           ]),
         )
       } else if (req.method === 'GET' && req.url === '/v2/integration/gathers') {
+        if (req.headers.authorization === 'Bearer test-missing-gathers-scope') {
+          res.writeHead(403).end('Synthetic upstream detail')
+          return
+        }
         res.end(JSON.stringify([{
           gatherUUID: '22222222-2222-4222-8222-222222222222',
           title: 'Example poll', mode: 'ADJUSTMENT',
@@ -165,6 +170,7 @@ test(
       const requestCount = requests.length
       const result = await client.callTool({ name: 'list-active-scheduling-polls', arguments: {} })
       assert.notEqual(result.isError, true)
+      assert.equal(result._meta?.['mcp/www_authenticate'], undefined)
       const { gathers } = resultData(result)
       assert.equal(gathers.length, 1)
       assert.deepEqual(gathers[0], {
@@ -264,6 +270,18 @@ test(
             body: { label: 'migration task', status: 'TODO' },
           })
         }
+        const listRequest = captured.find((entry) => entry.body.method === 'tools/list')
+        const response = await fetch(`${base}/mcp`, {
+          method: 'POST',
+          headers: listRequest.headers,
+          body: JSON.stringify(listRequest.body),
+        })
+        assert.equal(response.status, 200)
+        const { result } = await response.json()
+        assert.deepEqual(
+          result.tools.filter((tool) => tool._meta?.securitySchemes).map(toolContract),
+          [toolContract(activeGathersTool)],
+        )
       },
     )
 
@@ -331,6 +349,35 @@ test(
       assertActiveGathers(modern, 'token-A'),
       assertActiveGathers(legacy, 'legacy-token'),
     ])
+
+    await t.test('gathers scope errors carry a bounded OAuth challenge', async () => {
+      const token = 'test-missing-gathers-scope'
+      const modernClient = await connectModern(token)
+      const legacyClient = new LegacyClient(identity)
+      clients.push(legacyClient)
+      await legacyClient.connect(new LegacyHttpTransport(new URL(`${base}/mcp`), {
+        requestInit: { headers: { Authorization: `Bearer ${token}` } },
+      }))
+      for (const client of [modernClient, legacyClient]) {
+        const before = requests.length
+        const result = await client.callTool({ name: 'list-active-scheduling-polls', arguments: {} })
+        assert.equal(result.isError, true)
+        assert.deepEqual(resultData(result), { error: {
+          message: 'The gathers:read scope is required. Reauthorize the Togello OAuth connection and grant gathers:read.',
+        } })
+        assert.deepEqual(result._meta?.['mcp/www_authenticate'], [
+          'Bearer resource_metadata="https://mcp.example.test/.well-known/oauth-protected-resource/mcp", error="insufficient_scope", error_description="Reauthorize Togello OAuth with gathers:read", scope="gathers:read"',
+        ])
+        assert.equal(JSON.stringify(result).includes(token), false)
+        assert.equal(JSON.stringify(result).includes('Synthetic upstream detail'), false)
+        assert.deepEqual(requests.slice(before), [{
+          method: 'GET', path: '/v2/integration/gathers', token: `Bearer ${token}`, body: null,
+        }])
+      }
+      const otherTool = await modernClient.callTool({ name: 'get-todo-category-list', arguments: {} })
+      assert.notEqual(otherTool.isError, true)
+      assert.equal(otherTool._meta?.['mcp/www_authenticate'], undefined)
+    })
 
     await t.test(
       'modern protocol errors cannot fall back to a legacy session',

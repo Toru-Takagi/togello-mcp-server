@@ -159,6 +159,10 @@ export async function startRemoteServer(
             options.authMode,
           ),
         requireUpstreamToken: options.authMode === 'passthrough',
+        oauthResourceMetadataUrl:
+          options.authMode === 'passthrough'
+            ? mcpProtectedResourceMetadataUrl
+            : undefined,
       }),
     { legacy: 'reject', maxRequestBodySize: maxRequestBodyBytes },
   )
@@ -290,6 +294,10 @@ export async function startRemoteServer(
         const mcpServer = createMcpServer({
           resolveUpstreamToken,
           requireUpstreamToken: options.authMode === 'passthrough',
+          oauthResourceMetadataUrl:
+            options.authMode === 'passthrough'
+              ? protectedResourceMetadataUrl
+              : undefined,
         })
         let closed = false
 
@@ -449,6 +457,8 @@ async function handleStreamableHttpRequest({
   const mcpServer = createMcpServer({
     resolveUpstreamToken,
     requireUpstreamToken: authMode === 'passthrough',
+    oauthResourceMetadataUrl:
+      authMode === 'passthrough' ? protectedResourceMetadataUrl : undefined,
   })
 
   transport.onclose = () => {

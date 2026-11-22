@@ -1,6 +1,8 @@
 import { HttpStatusError, httpClient } from '../../client.js'
 import { errorToolResponse, jsonToolResponse } from './toolResponse.js'
 
+export const gathersReadScope = 'gathers:read'
+
 type GatherResponse = {
   gatherUUID: string
   title: string
@@ -14,7 +16,7 @@ type GatherResponse = {
   relationshipType: 'CREATOR' | 'VIEWER'
 }
 
-export const getActiveGathersHandler = async () => {
+export const getActiveGathersHandler = async (resourceMetadataUrl?: string) => {
   const now = Date.now()
   try {
     const gathers = await httpClient.fetchURL<GatherResponse[]>({
@@ -49,9 +51,27 @@ export const getActiveGathersHandler = async () => {
         )
       }
       if (error.status === 403) {
-        return errorToolResponse(
+        const result = errorToolResponse(
           'The gathers:read scope is required. Reauthorize the Togello OAuth connection and grant gathers:read.',
         )
+        const metadata = resourceMetadataUrl
+          ? URL.parse(resourceMetadataUrl)
+          : null
+        if (
+          metadata &&
+          (metadata.protocol === 'https:' || metadata.protocol === 'http:') &&
+          metadata.href === resourceMetadataUrl &&
+          !metadata.username &&
+          !metadata.password &&
+          !/[?#"\\]/.test(metadata.href)
+        ) {
+          result._meta = {
+            'mcp/www_authenticate': [
+              `Bearer resource_metadata="${metadata.href}", error="insufficient_scope", error_description="Reauthorize Togello OAuth with ${gathersReadScope}", scope="${gathersReadScope}"`,
+            ],
+          }
+        }
+        return result
       }
     }
     return errorToolResponse('Error retrieving active gathers')

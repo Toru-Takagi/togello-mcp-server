@@ -80,10 +80,30 @@ test('active gathers use a single instant, preserve order and restrict output', 
     const requestCount = requests.length
     const failure = await getActiveGathersHandler()
     assert.equal(failure.isError, true)
+    assert.equal(failure._meta, undefined)
     assert.deepEqual(data(failure), { error: { message } })
     assert.deepEqual(requests.slice(requestCount), [{
       method: 'GET', path: '/v2/integration/gathers', token: 'Bearer test-environment-token',
     }])
+  }
+  for (const failureStatus of [401, 500]) {
+    status = failureStatus
+    const failure = await getActiveGathersHandler('https://mcp.example.test/.well-known/oauth-protected-resource/mcp')
+    assert.equal(failure.isError, true)
+    assert.equal(failure._meta, undefined)
+  }
+  status = 403
+  for (const metadataUrl of [
+    'https://example-user:example-password@mcp.example.test/metadata',
+    'https://mcp.example.test/metadata?value=synthetic',
+    'https://mcp.example.test/metadata#synthetic',
+    'https://mcp.example.test/metadata"',
+    'https://mcp.example.test/metadata\n',
+    'file:///metadata',
+  ]) {
+    const failure = await getActiveGathersHandler(metadataUrl)
+    assert.equal(failure.isError, true)
+    assert.equal(failure._meta, undefined)
   }
   status = 200
   payload = { gathers: [] }
