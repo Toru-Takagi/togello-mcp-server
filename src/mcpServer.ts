@@ -432,7 +432,7 @@ export function createMcpServer(
     'list-active-scheduling-polls',
     {
       description:
-        'Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user. Unconfirmed polls remain active until the adjustment end time; confirmed events and recruitments remain active until their start time, inclusive. Events that have already started are excluded.',
+        'Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user. Unconfirmed polls remain active until the adjustment end time; confirmed events and recruitments remain active until their start time, inclusive. Events that have already started are excluded. Requires the gathers:read OAuth scope.',
       inputSchema: z.strictObject({}),
       annotations: readOnlyToolAnnotations,
     },

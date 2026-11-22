@@ -65,6 +65,8 @@ Remote OAuth clients that connect to `/mcp` should discover protected resource m
 
 The configured OAuth issuer must be an origin URL without a path component.
 
+Clients that use `list-active-scheduling-polls` must explicitly include `gathers:read` in the OAuth authorization request alongside the scopes they already need. For an existing connection without `gathers:read`, start a new authorization from the client's reconnect or reauthorize flow and approve the scope on the Togello consent screen. Existing grants keep their original scopes on refresh. Continue requesting `offline_access` when the client needs a refresh token. For stdio or `env` mode, provide the resulting OAuth access token as `TOGELLO_API_TOKEN` to use this tool.
+
 For OpenAI Apps domain verification, set `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` to the verification token. Remote mode then serves it from `/.well-known/openai-apps-challenge` as `text/plain`. If both `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` and `OPENAI_APPS_CHALLENGE_TOKEN` are set, the Togello-scoped variable takes precedence.
 
 ### Muse host verification (provisional)
@@ -107,7 +109,7 @@ All tools set MCP `readOnlyHint`, `openWorldHint`, and `destructiveHint` annotat
 - `get-today-calendar`: Retrieves linked Google Calendar events and scheduled tasks.
 - `get-activity-item-list`: Retrieves enabled activity items.
 - `get-activity-log-list`: Retrieves activity logs.
-- `list-active-scheduling-polls`: Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user, using `GET /v2/gathers`. Takes no arguments. Unconfirmed polls are active through their adjustment end time; confirmed events and recruitments are active through their start time, inclusive. Already-started events are excluded even if they have not ended. Missing or invalid eligibility dates are excluded. Results retain API ordering and contain only UUID, title, mode, adjustment and confirmed timestamps, participant counts, and relationship type. Returns `{ "gathers": [] }` when none qualify; API failures are errors.
+- `list-active-scheduling-polls`: Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user, using `GET /v2/integration/gathers` with a Togello OAuth access token granted `gathers:read`. Takes no arguments. Unconfirmed polls are active through their adjustment end time; confirmed events and recruitments are active through their start time, inclusive. Already-started events are excluded even if they have not ended. Missing or invalid eligibility dates are excluded. Results retain API ordering and contain only UUID, title, mode, adjustment and confirmed timestamps, participant counts, and relationship type. Returns `{ "gathers": [] }` when none qualify; API failures are errors.
 - `get-japan-current-time`: Returns the current time in Japan.
 
 The former tool ID `get-active-gathers` has been replaced by `list-active-scheduling-polls`; clients that store the old ID must update it. No compatibility alias is provided.
@@ -149,18 +151,18 @@ https://mcpreview.com/mcp-servers/toru-takagi/togello-mcp-server
 
 ## Publish
 
-After running `mise trust` once, authenticate with an npm account that can publish this package:
+After running `mise trust` once, run this command from an interactive terminal to increment the version in the local `package.json` and publish it:
 
 ```bash
-mise exec -- npm login
+mise run patch
 ```
 
-Choose an unused npm version and release it with one command (replace `1.0.46` with your release version):
+You can also specify an exact unpublished version:
 
 ```bash
 mise run release 1.0.46
 ```
 
-The release task installs Node.js and all locked dependencies, builds the server, runs the local tests, updates `package.json` and `package-lock.json` to the specified version, and publishes with `--access public`. A failed step stops the release before subsequent steps run. npm may prompt for authentication or a one-time password.
+The release task installs the dependencies, builds the server, and runs the tests. It then checks the current npm login with `npm whoami`. If that check fails, it runs `npm login` and checks again. Complete the browser sign-in with an npm account that can publish this package. Once npm confirms the login, the task updates `package.json` and `package-lock.json` and publishes with `--access public`. npm may request two-factor authentication during publishing.
 
-The task does not create a Git commit or tag. Version changes and generated `build/` files remain in the working tree for review and commit. If publishing fails, the version change remains; after resolving the failure, rerun the same command with the same version. If that version is already published, choose a new version: npm does not allow overwriting a published version.
+The task does not create a Git commit or tag. Version changes and generated `build/` files remain in the working tree for review and commit. If publishing fails after the version changes, fix the failure and retry with `mise run release <version>`, using the exact version now in `package.json`. Running `mise run patch` again increments it again. If that version is already published, choose a new version.

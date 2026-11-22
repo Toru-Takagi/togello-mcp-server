@@ -19,7 +19,13 @@ run = "npm test"
 description = "Test and publish the specified version to npm"
 usage = 'arg "<version>" help="Version to publish, for example 1.0.46"'
 depends = ["test"]
+interactive = true
 run = [
+  "npm whoami >/dev/null || (npm login && npm whoami >/dev/null)",
   'npm version "$usage_version" --no-git-tag-version --allow-same-version',
   "npm publish --access public",
 ]
+
+[tasks.patch]
+description = "Increment the patch version and publish it to npm"
+depends = ["release patch"]

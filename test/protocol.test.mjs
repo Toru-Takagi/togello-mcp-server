@@ -108,12 +108,17 @@ test(
             { categoryUUID: null, label: req.headers.authorization },
           ]),
         )
-      } else if (req.url === '/v2/gathers') {
+      } else if (req.method === 'GET' && req.url === '/v2/integration/gathers') {
         res.end(JSON.stringify([{
           gatherUUID: '22222222-2222-4222-8222-222222222222',
-          title: req.headers.authorization, mode: 'ADJUSTMENT',
+          title: 'Example poll', mode: 'ADJUSTMENT',
+          adjustmentStartDateTime: '2098-12-01T00:00:00Z',
           adjustmentEndDateTime: '2099-01-01T00:00:00Z',
-          confirmedStartDateTime: null, detail: 'private details',
+          confirmedStartDateTime: null,
+          confirmedEndDateTime: null,
+          numberOfParticipants: 2,
+          minNumberOfParticipants: 3,
+          relationshipType: 'VIEWER',
         }]))
       } else if (req.method === 'GET') {
         res.end('[]')
@@ -157,13 +162,28 @@ test(
 
     const todoUUID = '11111111-1111-4111-8111-111111111111'
     const assertActiveGathers = async (client, token) => {
+      const requestCount = requests.length
       const result = await client.callTool({ name: 'list-active-scheduling-polls', arguments: {} })
       assert.notEqual(result.isError, true)
       const { gathers } = resultData(result)
       assert.equal(gathers.length, 1)
-      assert.equal(gathers[0].title, `Bearer ${token}`)
-      assert.equal('detail' in gathers[0], false)
-      assert.ok(requests.some((request) => request.path === '/v2/gathers' && request.token === `Bearer ${token}`))
+      assert.deepEqual(gathers[0], {
+        gatherUUID: '22222222-2222-4222-8222-222222222222',
+        title: 'Example poll',
+        mode: 'ADJUSTMENT',
+        adjustmentStartDateTime: '2098-12-01T00:00:00Z',
+        adjustmentEndDateTime: '2099-01-01T00:00:00Z',
+        confirmedStartDateTime: null,
+        confirmedEndDateTime: null,
+        numberOfParticipants: 2,
+        minNumberOfParticipants: 3,
+        relationshipType: 'VIEWER',
+      })
+      const authorization = `Bearer ${token}`
+      const calls = requests.slice(requestCount).filter((request) => request.token === authorization)
+      assert.deepEqual(calls, [{
+        method: 'GET', path: '/v2/integration/gathers', token: authorization, body: null,
+      }])
     }
     const assertDeletion = async (client, token) => {
       const result = await client.callTool({
@@ -560,17 +580,25 @@ test(
           'mcp-name',
         ])
           assert.ok(allowed.includes(header))
-        const metadata = await (
-          await fetch(`${base}/.well-known/oauth-protected-resource/mcp`)
-        ).json()
-        assert.equal(metadata.resource, 'https://mcp.example.test/mcp')
-        assert.deepEqual(metadata.authorization_servers, [
-          'https://api.example.test',
-        ])
-        const issuer = await (
-          await fetch(`${base}/.well-known/oauth-authorization-server/mcp`)
-        ).json()
-        assert.equal(issuer.issuer, 'https://api.example.test')
+        const expectedScopes = [
+          'offline_access', 'tasks:read', 'tasks:write', 'activity:read',
+          'activity:write', 'calendar:read', 'gathers:read',
+        ]
+        for (const suffix of ['', '/mcp']) {
+          const metadata = await (
+            await fetch(`${base}/.well-known/oauth-protected-resource${suffix}`)
+          ).json()
+          assert.equal(metadata.resource, `https://mcp.example.test${suffix}`)
+          assert.deepEqual(metadata.authorization_servers, [
+            'https://api.example.test',
+          ])
+          assert.deepEqual(metadata.scopes_supported, expectedScopes)
+          const issuer = await (
+            await fetch(`${base}/.well-known/oauth-authorization-server${suffix}`)
+          ).json()
+          assert.equal(issuer.issuer, 'https://api.example.test')
+          assert.deepEqual(issuer.scopes_supported, expectedScopes)
+        }
         assert.equal(
           await (
             await fetch(`${base}/.well-known/openai-apps-challenge`)

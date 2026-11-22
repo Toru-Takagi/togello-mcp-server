@@ -1,5 +1,12 @@
 import { getUpstreamToken } from './upstreamTokenContext.js';
 const API_BASE_URL = process.env.TOGELLO_API_BASE_URL ?? 'https://togello.api.toru-takagi.dev';
+export class HttpStatusError extends Error {
+    status;
+    constructor(status) {
+        super(`response status: ${status}`);
+        this.status = status;
+    }
+}
 function getApiTokenOrThrow() {
     const token = getUpstreamToken() ?? process.env.TOGELLO_API_TOKEN;
     if (!token) {
@@ -32,7 +39,7 @@ export const httpClient = {
             },
         });
         if (!response.ok) {
-            throw new Error(`response status: ${response.status}`);
+            throw new HttpStatusError(response.status);
         }
         return (await response.json());
     },

@@ -9,7 +9,7 @@ test('active gathers use a single instant, preserve order and restrict output', 
   let status = 200
   let payload = []
   const server = createServer((request, response) => {
-    requests.push({ path: request.url, token: request.headers.authorization })
+    requests.push({ method: request.method, path: request.url, token: request.headers.authorization })
     response.writeHead(status, { 'Content-Type': 'application/json' })
     response.end(status === 200 ? JSON.stringify(payload) : 'private upstream details')
   })
@@ -65,16 +65,28 @@ test('active gathers use a single instant, preserve order and restrict output', 
   assert.equal(clockCalls - before, 1)
   const expected = payload.filter((_, index) => cases[index][1]).map((item) => Object.fromEntries(Object.keys(base).map((key) => [key, item[key]])))
   assert.deepEqual(data(result), { gathers: expected })
-  assert.deepEqual(requests.at(-1), { path: '/v2/gathers', token: 'Bearer test-request-token' })
+  assert.deepEqual(requests.at(-1), {
+    method: 'GET', path: '/v2/integration/gathers', token: 'Bearer test-request-token',
+  })
   payload = []
   assert.deepEqual(data(await getActiveGathersHandler()), { gathers: [] })
-  for (status of [401, 403, 500]) {
+  const errors = [
+    [401, 'A valid Togello OAuth access token with gathers:read is required. Reconnect or reauthorize with Togello OAuth.'],
+    [403, 'The gathers:read scope is required. Reauthorize the Togello OAuth connection and grant gathers:read.'],
+    [500, 'Error retrieving active gathers'],
+  ]
+  for (const [failureStatus, message] of errors) {
+    status = failureStatus
+    const requestCount = requests.length
     const failure = await getActiveGathersHandler()
     assert.equal(failure.isError, true)
-    assert.deepEqual(data(failure), { error: { message: 'Error retrieving active gathers' } })
+    assert.deepEqual(data(failure), { error: { message } })
+    assert.deepEqual(requests.slice(requestCount), [{
+      method: 'GET', path: '/v2/integration/gathers', token: 'Bearer test-environment-token',
+    }])
   }
   status = 200
-  payload = {}
+  payload = { gathers: [] }
   assert.equal((await getActiveGathersHandler()).isError, true)
   delete process.env.TOGELLO_API_TOKEN
   const requestCount = requests.length
