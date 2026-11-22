@@ -153,18 +153,22 @@ https://mcpreview.com/mcp-servers/toru-takagi/togello-mcp-server
 
 ## Publish
 
-After running `mise trust` once, run this command from an interactive terminal to increment the version in the local `package.json` and publish it:
+Run from the `main` branch of a regular checkout that is up to date with `origin/main`. After running `mise trust` once, use this command from an interactive terminal to publish a patch release:
 
 ```bash
 mise run patch
 ```
 
-You can also specify an exact unpublished version:
+You can also specify an exact version:
 
 ```bash
-mise run release 1.0.46
+mise run release 1.0.51
 ```
 
-The release task installs the dependencies, builds the server, and runs the tests. It then checks the current npm login with `npm whoami`. If that check fails, it runs `npm login` and checks again. Complete the browser sign-in with an npm account that can publish this package. Once npm confirms the login, the task updates `package.json` and `package-lock.json` and publishes with `--access public`. npm may request two-factor authentication during publishing.
+The patch task chooses the next version above both the version on `main` and the highest stable version on npm. If the only local edits set both manifests to a higher, unpublished version, it uses that version instead.
 
-The task does not create a Git commit or tag. Version changes and generated `build/` files remain in the working tree for review and commit. If publishing fails after the version changes, fix the failure and retry with `mise run release <version>`, using the exact version now in `package.json`. Running `mise run patch` again increments it again. If that version is already published, choose a new version.
+The release task installs dependencies, builds and tests the server, and checks the current npm login. It prompts for login as needed. It updates `package.json` and `package-lock.json`, commits the version change, publishes from a temporary checkout of that commit, and pushes the release commit to `origin/main`. The working tree must be clean except for version edits in the two manifests. Publishing may require two-factor authentication.
+
+If a release is interrupted, keep the release commit and rerun `mise run release <version>` with the version printed by the task. If npm already has that version, the task checks that its `gitHead` matches the release commit. If the push already succeeded, the task confirms the release without incrementing the version. If `origin/main` has moved to another commit, reconcile the release manually.
+
+Run only one release per checkout. If a terminated process leaves `.git/togello-release.lock`, confirm no release is still running in that checkout before removing the empty directory.

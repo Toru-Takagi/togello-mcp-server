@@ -16,16 +16,11 @@ depends = ["install"]
 run = "npm test"
 
 [tasks.release]
-description = "Test and publish the specified version to npm"
-usage = 'arg "<version>" help="Version to publish, for example 1.0.46"'
-depends = ["test"]
+description = "Test, publish, and push a release to origin/main"
+usage = 'arg "<version>" help="A version such as 1.0.51, or patch"'
 interactive = true
-run = [
-  "npm whoami >/dev/null || (npm login && npm whoami >/dev/null)",
-  'npm version "$usage_version" --no-git-tag-version --allow-same-version',
-  "npm publish --access public",
-]
+run = 'node scripts/release.mjs "$usage_version"'
 
 [tasks.patch]
-description = "Increment the patch version and publish it to npm"
+description = "Publish and push a patch release, or resume a pending release"
 depends = ["release patch"]
