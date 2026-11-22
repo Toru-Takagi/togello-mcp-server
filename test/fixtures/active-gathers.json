@@ -6,6 +6,9 @@
     "properties": {},
     "additionalProperties": false
   },
+  "_meta": {
+    "securitySchemes": [{ "type": "oauth2", "scopes": ["gathers:read"] }]
+  },
   "annotations": {
     "readOnlyHint": true,
     "openWorldHint": false,

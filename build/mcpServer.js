@@ -4,7 +4,7 @@ import { z as legacyZod } from 'zod/v3';
 import { completeActivityLogHandler } from './handlers/tool/completeActivityLogHandler.js';
 import { createTaskHandler } from './handlers/tool/createTaskHandler.js';
 import { deleteTaskHandler } from './handlers/tool/deleteTaskHandler.js';
-import { getActiveGathersHandler } from './handlers/tool/getActiveGathersHandler.js';
+import { gathersReadScope, getActiveGathersHandler, } from './handlers/tool/getActiveGathersHandler.js';
 import { getActivityItemListHandler } from './handlers/tool/getActivityItemListHandler.js';
 import { getActivityLogListHandler } from './handlers/tool/getActivityLogListHandler.js';
 import { getCalendarDateMemoHandler } from './handlers/tool/getCalendarDateMemoHandler.js';
@@ -245,6 +245,9 @@ export function createMcpServer(options = {}) {
         description: 'Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user. Unconfirmed polls remain active until the adjustment end time; confirmed events and recruitments remain active until their start time, inclusive. Events that have already started are excluded. Requires the gathers:read OAuth scope.',
         inputSchema: z.strictObject({}),
         annotations: readOnlyToolAnnotations,
-    }, withUpstreamToken(getActiveGathersHandler, options.resolveUpstreamToken, options.requireUpstreamToken));
+        _meta: {
+            securitySchemes: [{ type: 'oauth2', scopes: [gathersReadScope] }],
+        },
+    }, withUpstreamToken(() => getActiveGathersHandler(options.oauthResourceMetadataUrl), options.resolveUpstreamToken, options.requireUpstreamToken));
     return server;
 }

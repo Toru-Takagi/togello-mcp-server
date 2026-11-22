@@ -67,6 +67,8 @@ The configured OAuth issuer must be an origin URL without a path component.
 
 Clients that use `list-active-scheduling-polls` must explicitly include `gathers:read` in the OAuth authorization request alongside the scopes they already need. For an existing connection without `gathers:read`, start a new authorization from the client's reconnect or reauthorize flow and approve the scope on the Togello consent screen. Existing grants keep their original scopes on refresh. Continue requesting `offline_access` when the client needs a refresh token. For stdio or `env` mode, provide the resulting OAuth access token as `TOGELLO_API_TOKEN` to use this tool.
 
+The tool advertises `gathers:read` in its OAuth security metadata. In remote passthrough mode, a scope denial from the Togello API includes an `insufficient_scope` challenge so clients that support tool-level OAuth can offer reauthorization.
+
 For OpenAI Apps domain verification, set `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` to the verification token. Remote mode then serves it from `/.well-known/openai-apps-challenge` as `text/plain`. If both `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` and `OPENAI_APPS_CHALLENGE_TOKEN` are set, the Togello-scoped variable takes precedence.
 
 ### Muse host verification (provisional)

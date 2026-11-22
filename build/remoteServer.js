@@ -82,6 +82,9 @@ export async function startRemoteServer(options) {
     const modernHandler = createMcpHandler(({ requestInfo }) => createMcpServer({
         resolveUpstreamToken: () => getUpstreamToken(requestInfo?.headers.get('authorization') ?? undefined, options.authMode),
         requireUpstreamToken: options.authMode === 'passthrough',
+        oauthResourceMetadataUrl: options.authMode === 'passthrough'
+            ? mcpProtectedResourceMetadataUrl
+            : undefined,
     }), { legacy: 'reject', maxRequestBodySize: maxRequestBodyBytes });
     const handleModernRequest = toNodeHandler(modernHandler, {
         maxRequestBodySize: maxRequestBodyBytes,
@@ -187,6 +190,9 @@ export async function startRemoteServer(options) {
                 const mcpServer = createMcpServer({
                     resolveUpstreamToken,
                     requireUpstreamToken: options.authMode === 'passthrough',
+                    oauthResourceMetadataUrl: options.authMode === 'passthrough'
+                        ? protectedResourceMetadataUrl
+                        : undefined,
                 });
                 let closed = false;
                 const keepAliveMs = options.sseKeepAliveMs;
@@ -305,6 +311,7 @@ async function handleStreamableHttpRequest({ body, req, res, authMode, protected
     const mcpServer = createMcpServer({
         resolveUpstreamToken,
         requireUpstreamToken: authMode === 'passthrough',
+        oauthResourceMetadataUrl: authMode === 'passthrough' ? protectedResourceMetadataUrl : undefined,
     });
     transport.onclose = () => {
         const initializedSessionId = transport.sessionId;
