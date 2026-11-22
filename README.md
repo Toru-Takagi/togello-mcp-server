@@ -65,6 +65,8 @@ Remote OAuth clients that connect to `/mcp` should discover protected resource m
 
 The configured OAuth issuer must be an origin URL without a path component.
 
+Clients that use `list-active-scheduling-polls` must explicitly include `gathers:read` in the OAuth authorization request alongside the scopes they already need. For an existing connection without `gathers:read`, start a new authorization from the client's reconnect or reauthorize flow and approve the scope on the Togello consent screen. Existing grants keep their original scopes on refresh. Continue requesting `offline_access` when the client needs a refresh token. For stdio or `env` mode, provide the resulting OAuth access token as `TOGELLO_API_TOKEN` to use this tool.
+
 For OpenAI Apps domain verification, set `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` to the verification token. Remote mode then serves it from `/.well-known/openai-apps-challenge` as `text/plain`. If both `TOGELLO_MCP_OPENAI_APPS_CHALLENGE_TOKEN` and `OPENAI_APPS_CHALLENGE_TOKEN` are set, the Togello-scoped variable takes precedence.
 
 ### Muse host verification (provisional)
@@ -107,7 +109,7 @@ All tools set MCP `readOnlyHint`, `openWorldHint`, and `destructiveHint` annotat
 - `get-today-calendar`: Retrieves linked Google Calendar events and scheduled tasks.
 - `get-activity-item-list`: Retrieves enabled activity items.
 - `get-activity-log-list`: Retrieves activity logs.
-- `list-active-scheduling-polls`: Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user, using `GET /v2/gathers`. Takes no arguments. Unconfirmed polls are active through their adjustment end time; confirmed events and recruitments are active through their start time, inclusive. Already-started events are excluded even if they have not ended. Missing or invalid eligibility dates are excluded. Results retain API ordering and contain only UUID, title, mode, adjustment and confirmed timestamps, participant counts, and relationship type. Returns `{ "gathers": [] }` when none qualify; API failures are errors.
+- `list-active-scheduling-polls`: Lists active scheduling polls (ADJUSTMENT), confirmed events (CONFIRM), and recruitments (RECRUITMENT) created or previously viewed by the authenticated user, using `GET /v2/integration/gathers` with a Togello OAuth access token granted `gathers:read`. Takes no arguments. Unconfirmed polls are active through their adjustment end time; confirmed events and recruitments are active through their start time, inclusive. Already-started events are excluded even if they have not ended. Missing or invalid eligibility dates are excluded. Results retain API ordering and contain only UUID, title, mode, adjustment and confirmed timestamps, participant counts, and relationship type. Returns `{ "gathers": [] }` when none qualify; API failures are errors.
 - `get-japan-current-time`: Returns the current time in Japan.
 
 The former tool ID `get-active-gathers` has been replaced by `list-active-scheduling-polls`; clients that store the old ID must update it. No compatibility alias is provided.

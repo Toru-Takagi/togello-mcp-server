@@ -22,6 +22,7 @@ const supportedScopes = [
     'activity:read',
     'activity:write',
     'calendar:read',
+    'gathers:read',
 ];
 export async function startRemoteServer(options) {
     const museChallengeToken = options.museChallengeToken;
